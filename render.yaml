@@ -1,0 +1,57 @@
+services:
+  # Microservice 1: Resource Service
+  - type: web
+    name: resource-service
+    env: node
+    rootDir: resource-service
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: SERVICE_API_KEY
+        generateValue: true
+
+  # Microservice 2: Exchange Service
+  - type: web
+    name: exchange-service
+    env: node
+    rootDir: exchange-service
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: resource-service
+          envVarKey: JWT_SECRET
+      - key: RESOURCE_SERVICE_URL
+        fromService:
+          type: web
+          name: resource-service
+          property: host
+      - key: SERVICE_API_KEY
+        fromService:
+          type: web
+          name: resource-service
+          envVarKey: SERVICE_API_KEY
+      - key: CLIENT_ORIGIN
+        sync: false

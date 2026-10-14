@@ -1,0 +1,469 @@
+{
+  "info": {
+    "_postman_id": "8f7e2a1b-3c4d-5e6f-7a8b-9c0d1e2f3a4b",
+    "name": "Resource Exchange Platform - Microservices API Collection",
+    "description": "Comprehensive API collection for the Resource Exchange Platform covering student authentication, resource management, exchange requests, inter-service REST communication, and error handling edge cases.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Resource Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{resource_service_url}}/health",
+              "host": ["{{resource_service_url}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Exchange Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{exchange_service_url}}/health",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1. Student Authentication",
+      "item": [
+        {
+          "name": "Register Student (Priya Sharma)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.environment.set('student_token', json.data.token);",
+                  "    pm.environment.set('student_id', json.data.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Priya Sharma\",\n  \"email\": \"priya.sharma@apex.edu\",\n  \"password\": \"Password@123\",\n  \"collegeName\": \"Apex Engineering Institute\",\n  \"department\": \"Computer Science and Engineering\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/auth/register",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register Student - Reject Duplicate Email (Negative)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate Priya\",\n  \"email\": \"priya.sharma@apex.edu\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/auth/register",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login Student (Rahul Verma)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.environment.set('second_student_token', json.data.token);",
+                  "    pm.environment.set('second_student_id', json.data.user.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahul.verma@apex.edu\",\n  \"password\": \"Password@123\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/auth/login",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Invalid Password (Negative)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahul.verma@apex.edu\",\n  \"password\": \"WrongSecret\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/auth/login",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Authenticated Profile (/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": {
+              "raw": "{{resource_service_url}}/api/auth/me",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Resource Service CRUD & Search",
+      "item": [
+        {
+          "name": "Create Resource Listing (Lend CLRS Book)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.environment.set('resource_id', json.data._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Introduction to Algorithms (CLRS 3rd Ed)\",\n  \"description\": \"Complete algorithms reference covering dynamic programming, graph analysis, and sorting. Pristine condition.\",\n  \"category\": \"Textbooks\",\n  \"listingType\": \"Lend\",\n  \"condition\": \"Like New\",\n  \"lendingDuration\": \"14 days\",\n  \"location\": \"Central Campus Library, Floor 2\",\n  \"imageUrl\": \"https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Resource - Unauthorized (Negative)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Unauthorized Book\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Resources (Paginated & Filtered)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources?page=1&limit=10&availability=available",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "availability", "value": "available" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Resources by Keyword",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources/search?q=Algorithms",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources", "search"],
+              "query": [{ "key": "q", "value": "Algorithms" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Resource by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources", "{{resource_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Resource Listing (Owner Only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Introduction to Algorithms (CLRS 3rd Ed) - Updated Edition\",\n  \"lendingDuration\": \"21 days\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources", "{{resource_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Resource - Non-Owner Edit (Negative 403)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Unauthorized Modification Attempt\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources", "{{resource_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Patch Resource Availability (Service Key / Owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-service-api-key", "value": "{{service_api_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availabilityStatus\": \"available\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}/availability",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources", "{{resource_id}}", "availability"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Exchange Service & REST Coordination",
+      "item": [
+        {
+          "name": "Submit Exchange Request (Triggers REST Verification)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.environment.set('exchange_id', json.data._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceId\": \"{{resource_id}}\",\n  \"requestMessage\": \"Hi Priya, I need the CLRS book for our upcoming algorithm midterm test.\",\n  \"durationRequested\": \"10 days\"\n}"
+            },
+            "url": {
+              "raw": "{{exchange_service_url}}/api/exchanges",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["api", "exchanges"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Request - Requesting Own Resource (Negative 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceId\": \"{{resource_id}}\",\n  \"requestMessage\": \"Self request attempt\"\n}"
+            },
+            "url": {
+              "raw": "{{exchange_service_url}}/api/exchanges",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["api", "exchanges"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Request - Duplicate Pending (Negative 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceId\": \"{{resource_id}}\",\n  \"requestMessage\": \"Duplicate request\"\n}"
+            },
+            "url": {
+              "raw": "{{exchange_service_url}}/api/exchanges",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["api", "exchanges"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Sent Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
+            ],
+            "url": {
+              "raw": "{{exchange_service_url}}/api/exchanges/sent",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["api", "exchanges", "sent"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Received Requests (Owner Perspective)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "url": {
+              "raw": "{{exchange_service_url}}/api/exchanges/received",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["api", "exchanges", "received"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Approve Request (Coordinates REST Lock on Resource Service)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Approved\",\n  \"note\": \"Approved! You can collect it at the library 2nd floor.\"\n}"
+            },
+            "url": {
+              "raw": "{{exchange_service_url}}/api/exchanges/{{exchange_id}}/status",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["api", "exchanges", "{{exchange_id}}", "status"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Request (Coordinates REST Availability Restoration)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Midterm schedule changed, no longer required.\"\n}"
+            },
+            "url": {
+              "raw": "{{exchange_service_url}}/api/exchanges/{{exchange_id}}/cancel",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["api", "exchanges", "{{exchange_id}}", "cancel"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

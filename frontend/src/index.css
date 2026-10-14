@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 font-sans antialiased min-h-screen selection:bg-teal-500 selection:text-white;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-navy-950 font-semibold tracking-tight;
+  }
+}
+
+/* Restrained smooth transitions */
+button, a, input, select, textarea {
+  transition: all 0.15s ease-in-out;
+}
+
+/* Subtle clean card hover */
+.card-hover {
+  @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
+}
+
+/* Clean scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

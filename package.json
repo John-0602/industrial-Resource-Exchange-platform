@@ -1,0 +1,17 @@
+{
+  "name": "resource-exchange-platform",
+  "version": "1.0.0",
+  "description": "Resource Exchange Platform for College Students - Microservices Architecture",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix resource-service && npm install --prefix exchange-service && npm install --prefix frontend",
+    "seed:all": "npm run seed --prefix resource-service && npm run seed --prefix exchange-service",
+    "test:all": "npm test --prefix resource-service && npm test --prefix exchange-service",
+    "dev:resource": "npm run dev --prefix resource-service",
+    "dev:exchange": "npm run dev --prefix exchange-service",
+    "dev:frontend": "npm run dev --prefix frontend"
+  },
+  "keywords": ["microservices", "mern", "resource-exchange", "college", "react", "express", "mongodb"],
+  "author": "",
+  "license": "ISC"
+}
