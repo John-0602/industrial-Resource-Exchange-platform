@@ -69,7 +69,8 @@ export const MatchingResultsPage = () => {
         const reqId = selectedRequirement._id || selectedRequirement.id;
         const res = await exchangeApi.get(`/api/matches/${reqId}`);
         if (res.data.success) {
-          setMatches(res.data.data?.matches || []);
+          const rawMatches = res.data.data?.matches || (Array.isArray(res.data.data) ? res.data.data : []);
+          setMatches(rawMatches);
         }
       } catch (err) {
         console.error('Failed to fetch circular matches:', err);
@@ -299,19 +300,22 @@ export const MatchingResultsPage = () => {
                     </div>
 
                     {/* Compatibility Factor Breakdown */}
-                    {factors.length > 0 && (
+                    {((matchItem.explanations && matchItem.explanations.length > 0) || (factors && factors.length > 0)) && (
                       <div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
                           Matching Algorithm Insights
                         </span>
                         <div className="flex flex-wrap gap-1.5">
-                          {factors.map((factor, idx) => (
+                          {((matchItem.explanations && matchItem.explanations.length > 0)
+                            ? matchItem.explanations
+                            : factors.map((f) => (typeof f === 'string' ? f : `${f.name}: +${f.points} pts`))
+                          ).map((itemStr, idx) => (
                             <span
                               key={idx}
                               className="inline-flex items-center gap-1 text-[11px] font-medium bg-teal-50 text-teal-800 border border-teal-200 px-2 py-0.5 rounded"
                             >
                               <CheckCircle2 className="w-3 h-3 text-teal-600" />
-                              <span>{factor}</span>
+                              <span>{itemStr}</span>
                             </span>
                           ))}
                         </div>

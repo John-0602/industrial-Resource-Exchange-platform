@@ -192,7 +192,7 @@ const searchResources = async (req, res, next) => {
     }
 
     if (req.query.category && req.query.category !== 'All') {
-      query.materialCategory = req.query.category;
+      query.$or = [{ category: req.query.category }, { materialCategory: req.query.category }];
     }
 
     if (req.query.resourceType && req.query.resourceType !== 'All') {
@@ -441,7 +441,7 @@ const getMatchingCandidates = async (req, res, next) => {
     };
 
     if (category) {
-      query.materialCategory = category;
+      query.$or = [{ category }, { materialCategory: category }];
     }
 
     if (minQty) {

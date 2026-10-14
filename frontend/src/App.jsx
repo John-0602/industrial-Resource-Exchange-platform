@@ -94,6 +94,22 @@ export const App = () => {
                   }
                 />
                 <Route
+                  path="/post-requirement"
+                  element={
+                    <ProtectedRoute>
+                      <PostRequirementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/post_requirement"
+                  element={
+                    <ProtectedRoute>
+                      <PostRequirementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/matching"
                   element={
                     <ProtectedRoute>

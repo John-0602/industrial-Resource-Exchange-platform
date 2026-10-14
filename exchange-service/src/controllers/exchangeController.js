@@ -96,7 +96,15 @@ const getMatchesForRequirement = async (req, res, next) => {
 
     // Step 2: Calculate compatibility scores and breakdown explanations
     const matches = candidates
-      .filter((resource) => (resource.supplier?.id || resource.supplier?._id) !== requirement.companyId)
+      .filter((resource) => {
+        const supplierId = resource.supplierCompanyId || resource.supplier?.id || resource.supplier?._id;
+        const receiverId = requirement.receiverCompanyId || requirement.companyId;
+        // Don't match the same company's own resources
+        if (supplierId && receiverId && supplierId.toString() === receiverId.toString()) {
+          return false;
+        }
+        return true;
+      })
       .map((resource) => {
         const analysis = calculateCompatibility(requirement, resource);
         return {
@@ -111,13 +119,13 @@ const getMatchesForRequirement = async (req, res, next) => {
       count: matches.length,
       requirement: {
         id: requirement._id,
-        title: requirement.title,
+        title: requirement.materialTitle || requirement.title,
         materialCategory: requirement.materialCategory,
         requiredQuantity: requirement.requiredQuantity,
         unit: requirement.unit,
         acceptableCondition: requirement.acceptableCondition,
         deliveryLocation: requirement.deliveryLocation,
-        maxBudget: requirement.maxBudget
+        maxBudget: requirement.maxBudgetPerUnit || requirement.maxBudget
       },
       data: matches
     });
