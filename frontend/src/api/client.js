@@ -21,7 +21,7 @@ export const exchangeApi = axios.create({
 
 // Request interceptor to attach JWT token
 const attachAuthToken = (config) => {
-  const token = localStorage.getItem('resource_exchange_token');
+  const token = localStorage.getItem('irep_company_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -34,11 +34,10 @@ exchangeApi.interceptors.request.use(attachAuthToken, (error) => Promise.reject(
 // Response interceptor to catch unauthorized / expired tokens
 const handleAuthError = (error) => {
   if (error.response && error.response.status === 401) {
-    console.warn('[API Client] Unauthorized or expired session detected.');
-    // Only clear if on authenticated action
-    if (localStorage.getItem('resource_exchange_token')) {
-      localStorage.removeItem('resource_exchange_token');
-      localStorage.removeItem('resource_exchange_user');
+    console.warn('[API Client] Unauthorized or expired industrial session detected.');
+    if (localStorage.getItem('irep_company_token')) {
+      localStorage.removeItem('irep_company_token');
+      localStorage.removeItem('irep_company_user');
       window.dispatchEvent(new Event('auth:logout'));
     }
   }

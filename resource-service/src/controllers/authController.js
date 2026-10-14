@@ -1,31 +1,47 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const Company = require('../models/Company');
 
-const generateToken = (user) => {
+const generateToken = (company) => {
   return jwt.sign(
     {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      collegeName: user.collegeName,
-      department: user.department
+      id: company._id,
+      name: company.name,
+      email: company.email,
+      industrySector: company.industrySector,
+      companyRole: company.companyRole,
+      verificationStatus: company.verificationStatus,
+      role: company.role
     },
-    process.env.JWT_SECRET || 'super_secret_jwt_key_for_resource_service_college_2025',
+    process.env.JWT_SECRET || 'super_secret_jwt_key_for_irep_platform_2025',
     { expiresIn: '7d' }
   );
 };
 
-// @desc    Register a new student
+// @desc    Register a new industrial company
 // @route   POST /api/auth/register
 // @access  Public
-const registerStudent = async (req, res, next) => {
+const registerCompany = async (req, res, next) => {
   try {
-    const { name, email, password, collegeName, department, profileImage } = req.body;
+    const {
+      name,
+      registrationRef,
+      industrySector,
+      contactPerson,
+      email,
+      password,
+      phone,
+      address,
+      city,
+      state,
+      country,
+      description,
+      companyRole
+    } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !industrySector || !address || !city || !state) {
       return res.status(400).json({
         success: false,
-        message: 'Name, email, and password are required'
+        message: 'Please complete all required company registration fields'
       });
     }
 
@@ -37,39 +53,52 @@ const registerStudent = async (req, res, next) => {
     }
 
     const emailNormalized = email.toLowerCase().trim();
-    const existingUser = await User.findOne({ email: emailNormalized });
-
-    if (existingUser) {
+    const existing = await Company.findOne({ email: emailNormalized });
+    if (existing) {
       return res.status(400).json({
         success: false,
-        message: 'A student account with this email address already exists'
+        message: 'A company account with this official email already exists'
       });
     }
 
-    const user = await User.create({
+    const company = await Company.create({
       name: name.trim(),
+      registrationRef: registrationRef ? registrationRef.trim() : 'GSTIN-PENDING',
+      industrySector,
+      contactPerson: contactPerson ? contactPerson.trim() : 'Facility Manager',
       email: emailNormalized,
       password,
-      collegeName: collegeName ? collegeName.trim() : 'Apex Engineering Institute',
-      department: department ? department.trim() : 'Computer Science and Engineering',
-      profileImage: profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name.trim())}`
+      phone: phone || '',
+      address: address.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      country: country ? country.trim() : 'India',
+      description: description ? description.trim() : '',
+      companyRole: companyRole || 'both',
+      verificationStatus: 'Pending',
+      role: 'company'
     });
 
-    const token = generateToken(user);
+    const token = generateToken(company);
 
     res.status(201).json({
       success: true,
-      message: 'Student registered successfully',
+      message: 'Company registered successfully. Account verification is currently Pending.',
       data: {
         token,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          collegeName: user.collegeName,
-          department: user.department,
-          profileImage: user.profileImage,
-          createdAt: user.createdAt
+        company: {
+          id: company._id,
+          name: company.name,
+          registrationRef: company.registrationRef,
+          email: company.email,
+          industrySector: company.industrySector,
+          contactPerson: company.contactPerson,
+          city: company.city,
+          state: company.state,
+          companyRole: company.companyRole,
+          verificationStatus: company.verificationStatus,
+          role: company.role,
+          createdAt: company.createdAt
         }
       }
     });
@@ -78,53 +107,58 @@ const registerStudent = async (req, res, next) => {
   }
 };
 
-// @desc    Authenticate student & get token
+// @desc    Authenticate company & obtain JWT
 // @route   POST /api/auth/login
 // @access  Public
-const loginStudent = async (req, res, next) => {
+const loginCompany = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide both email and password'
+        message: 'Please provide corporate email and password'
       });
     }
 
     const emailNormalized = email.toLowerCase().trim();
-    const user = await User.findOne({ email: emailNormalized }).select('+password');
+    const company = await Company.findOne({ email: emailNormalized }).select('+password');
 
-    if (!user) {
+    if (!company) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials: No account associated with this email'
+        message: 'Authentication failed: No company registered with this email'
       });
     }
 
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await company.matchPassword(password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials: Password entered is incorrect'
+        message: 'Authentication failed: Incorrect password'
       });
     }
 
-    const token = generateToken(user);
+    const token = generateToken(company);
 
     res.json({
       success: true,
       message: 'Logged in successfully',
       data: {
         token,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          collegeName: user.collegeName,
-          department: user.department,
-          profileImage: user.profileImage,
-          createdAt: user.createdAt
+        company: {
+          id: company._id,
+          name: company.name,
+          registrationRef: company.registrationRef,
+          email: company.email,
+          industrySector: company.industrySector,
+          contactPerson: company.contactPerson,
+          city: company.city,
+          state: company.state,
+          companyRole: company.companyRole,
+          verificationStatus: company.verificationStatus,
+          role: company.role,
+          createdAt: company.createdAt
         }
       }
     });
@@ -133,44 +167,72 @@ const loginStudent = async (req, res, next) => {
   }
 };
 
-// @desc    Get current logged in student profile
+// @desc    Get current company profile
 // @route   GET /api/auth/me
 // @access  Private
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) {
+    const company = await Company.findById(req.company.id);
+    if (!company) {
       return res.status(404).json({
         success: false,
-        message: 'Student profile not found'
+        message: 'Company profile not found'
       });
     }
 
     res.json({
       success: true,
-      data: user
+      data: company
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get student profile by ID
-// @route   GET /api/auth/profile/:id
-// @access  Public
-const getStudentProfile = async (req, res, next) => {
+// @desc    Admin: List all companies for verification review
+// @route   GET /api/admin/companies
+// @access  Private (Admin)
+const getCompaniesForAdmin = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
-    if (!user) {
-      return res.status(404).json({
+    const companies = await Company.find().sort({ createdAt: -1 });
+    res.json({
+      success: true,
+      count: companies.length,
+      data: companies
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Admin: Update company verification status
+// @route   PATCH /api/admin/companies/:id/verify
+// @access  Private (Admin)
+const verifyCompany = async (req, res, next) => {
+  try {
+    const { verificationStatus } = req.body;
+    if (!['Pending', 'Verified', 'Rejected'].includes(verificationStatus)) {
+      return res.status(400).json({
         success: false,
-        message: 'Student profile not found'
+        message: 'Invalid status. Permitted: Pending, Verified, Rejected'
       });
     }
 
+    const company = await Company.findById(req.params.id);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    company.verificationStatus = verificationStatus;
+    await company.save();
+
     res.json({
       success: true,
-      data: user
+      message: `Company verification status updated to "${verificationStatus}"`,
+      data: company
     });
   } catch (error) {
     next(error);
@@ -178,8 +240,9 @@ const getStudentProfile = async (req, res, next) => {
 };
 
 module.exports = {
-  registerStudent,
-  loginStudent,
+  registerCompany,
+  loginCompany,
   getMe,
-  getStudentProfile
+  getCompaniesForAdmin,
+  verifyCompany
 };

@@ -15,13 +15,17 @@ import { ResourceDetailsPage } from './pages/ResourceDetailsPage';
 import { AddResourcePage } from './pages/AddResourcePage';
 import { EditResourcePage } from './pages/EditResourcePage';
 import { MyListingsPage } from './pages/MyListingsPage';
+import { PostRequirementPage } from './pages/PostRequirementPage';
+import { MatchingResultsPage } from './pages/MatchingResultsPage';
 import { SentRequestsPage } from './pages/SentRequestsPage';
 import { ReceivedRequestsPage } from './pages/ReceivedRequestsPage';
+import { NegotiationDetailsPage } from './pages/NegotiationDetailsPage';
 import { ExchangeHistoryPage } from './pages/ExchangeHistoryPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
-import { BookOpen, Server, Shield, Heart } from 'lucide-react';
+import { Factory, Server, ShieldCheck, Leaf } from 'lucide-react';
 
 export const App = () => {
   return (
@@ -33,14 +37,14 @@ export const App = () => {
 
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <Routes>
-                {/* Public Routes */}
+                {/* Public Pages */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/marketplace" element={<MarketplacePage />} />
                 <Route path="/resources/:id" element={<ResourceDetailsPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
 
-                {/* Protected Routes */}
+                {/* Protected Industrial Operations */}
                 <Route
                   path="/dashboard"
                   element={
@@ -51,6 +55,14 @@ export const App = () => {
                 />
                 <Route
                   path="/add-resource"
+                  element={
+                    <ProtectedRoute>
+                      <AddResourcePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/publish-resource"
                   element={
                     <ProtectedRoute>
                       <AddResourcePage />
@@ -74,6 +86,22 @@ export const App = () => {
                   }
                 />
                 <Route
+                  path="/requirements/new"
+                  element={
+                    <ProtectedRoute>
+                      <PostRequirementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/matching"
+                  element={
+                    <ProtectedRoute>
+                      <MatchingResultsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/requests/sent"
                   element={
                     <ProtectedRoute>
@@ -86,6 +114,14 @@ export const App = () => {
                   element={
                     <ProtectedRoute>
                       <ReceivedRequestsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/exchanges/:id"
+                  element={
+                    <ProtectedRoute>
+                      <NegotiationDetailsPage />
                     </ProtectedRoute>
                   }
                 />
@@ -106,63 +142,96 @@ export const App = () => {
                   }
                 />
 
-                {/* Catch-all 404 */}
+                {/* Administrator Dashboard */}
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute>
+                      <AdminDashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 404 Not Found */}
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </main>
 
-            {/* Footer */}
-            <footer className="bg-white border-t border-slate-200 mt-16 text-slate-600 text-xs">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                  <div className="space-y-2 md:col-span-2">
+            {/* Industrial B2B Platform Footer */}
+            <footer className="bg-navy-950 border-t border-slate-800 mt-16 text-slate-300 text-xs">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                  <div className="space-y-3 md:col-span-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-navy-950 text-teal-400 flex items-center justify-center font-bold">
-                        <BookOpen className="w-4 h-4" />
+                      <div className="w-8 h-8 rounded-lg bg-teal-500 text-navy-950 flex items-center justify-center font-bold">
+                        <Factory className="w-5 h-5" />
                       </div>
-                      <span className="font-bold text-slate-900 text-sm">ResourceHub</span>
-                      <span className="text-[11px] font-medium bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                        College Microservices Lab
+                      <span className="font-bold text-white text-base">
+                        Industrial Resource Exchange Platform (IREP)
                       </span>
                     </div>
-                    <p className="text-slate-500 text-xs leading-relaxed max-w-md">
-                      A full-stack campus resource exchange platform architected with two autonomous backend microservices, REST communication, and isolated MongoDB databases.
+                    <p className="text-slate-400 text-xs leading-relaxed max-w-lg">
+                      A digital intermediary connecting manufacturing facilities to discover surplus by-products, negotiate commercial terms, and coordinate resource transfers for industrial circular symbiosis.
                     </p>
+                    <div className="flex items-center gap-4 text-[11px] text-teal-400 font-medium">
+                      <span className="flex items-center gap-1">
+                        <Leaf className="w-3.5 h-3.5" />
+                        <span>Zero Landfill Mission</span>
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>PCB Regulatory Manifests</span>
+                      </span>
+                    </div>
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-slate-800 uppercase tracking-wider text-[11px] mb-2">Platform</h4>
-                    <ul className="space-y-1 text-slate-500">
-                      <li><Link to="/marketplace" className="hover:text-teal-700">Browse Catalog</Link></li>
-                      <li><Link to="/add-resource" className="hover:text-teal-700">List an Item</Link></li>
-                      <li><Link to="/dashboard" className="hover:text-teal-700">Student Dashboard</Link></li>
-                      <li><Link to="/requests/received" className="hover:text-teal-700">Pending Requests</Link></li>
+                    <h4 className="font-semibold text-white uppercase tracking-wider text-[11px] mb-3">
+                      Circular Exchange
+                    </h4>
+                    <ul className="space-y-2 text-slate-400">
+                      <li><Link to="/marketplace" className="hover:text-teal-400 transition-colors">Material Marketplace</Link></li>
+                      <li><Link to="/requirements/new" className="hover:text-teal-400 transition-colors">Post Material Requirement</Link></li>
+                      <li><Link to="/matching" className="hover:text-teal-400 transition-colors">Circular Matching Engine</Link></li>
+                      <li><Link to="/add-resource" className="hover:text-teal-400 transition-colors">Publish Surplus By-Product</Link></li>
+                      <li><Link to="/history" className="hover:text-teal-400 transition-colors">Transfer & Freight Tracking</Link></li>
                     </ul>
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-slate-800 uppercase tracking-wider text-[11px] mb-2">Microservices</h4>
-                    <ul className="space-y-1 text-slate-500 text-[11px]">
-                      <li className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <h4 className="font-semibold text-white uppercase tracking-wider text-[11px] mb-3">
+                      Decoupled Microservices
+                    </h4>
+                    <ul className="space-y-2 text-slate-400 text-[11px] font-mono">
+                      <li className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
                         <span>Resource Service (:5001)</span>
                       </li>
-                      <li className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                      <li className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-teal-400" />
                         <span>Exchange Service (:5002)</span>
                       </li>
-                      <li className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                        <span>Frontend Vite React (:5173)</span>
+                      <li className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-sky-400" />
+                        <span>Client React Vite (:5173)</span>
+                      </li>
+                      <li className="flex items-center gap-2 text-slate-500 pt-1 border-t border-slate-800">
+                        <Server className="w-3 h-3 text-slate-400" />
+                        <span>Inter-Service REST Protocol</span>
                       </li>
                     </ul>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-slate-400">
-                  <p>© {new Date().getFullYear()} Resource Exchange Platform. Developed for Full Stack Application Lab.</p>
-                  <p className="flex items-center gap-1">
-                    <span>Built with MERN Microservices & REST APIs</span>
+                <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-500 text-[11px]">
+                  <p>© {new Date().getFullYear()} Industrial Resource Exchange Platform (IREP). Full-Stack Architecture Demonstration.</p>
+                  <p className="flex items-center gap-1.5 font-medium text-slate-400">
+                    <span>Decoupled MERN Microservices</span>
+                    <span>•</span>
+                    <span>REST Coordination</span>
+                    <span>•</span>
+                    <span>Isolated Databases</span>
                   </p>
                 </div>
               </div>

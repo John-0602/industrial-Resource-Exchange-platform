@@ -6,41 +6,45 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('resource_exchange_user');
+      const stored = localStorage.getItem('irep_company_user');
       return stored ? JSON.parse(stored) : null;
     } catch {
       return null;
     }
   });
-  const [token, setToken] = useState(() => localStorage.getItem('resource_exchange_token') || null);
+  const [token, setToken] = useState(() => localStorage.getItem('irep_company_token') || null);
   const [loading, setLoading] = useState(true);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('resource_exchange_token');
-    localStorage.removeItem('resource_exchange_user');
+    localStorage.removeItem('irep_company_token');
+    localStorage.removeItem('irep_company_user');
     setToken(null);
     setUser(null);
   }, []);
 
-  // Sync session on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const storedToken = localStorage.getItem('resource_exchange_token');
+      const storedToken = localStorage.getItem('irep_company_token');
       if (storedToken) {
         try {
           const res = await resourceApi.get('/api/auth/me');
           if (res.data.success) {
-            const userData = {
+            const companyData = {
               id: res.data.data._id || res.data.data.id,
               name: res.data.data.name,
               email: res.data.data.email,
-              collegeName: res.data.data.collegeName,
-              department: res.data.data.department,
-              profileImage: res.data.data.profileImage,
+              registrationRef: res.data.data.registrationRef,
+              industrySector: res.data.data.industrySector,
+              contactPerson: res.data.data.contactPerson,
+              city: res.data.data.city,
+              state: res.data.data.state,
+              companyRole: res.data.data.companyRole,
+              verificationStatus: res.data.data.verificationStatus,
+              role: res.data.data.role,
               createdAt: res.data.data.createdAt
             };
-            setUser(userData);
-            localStorage.setItem('resource_exchange_user', JSON.stringify(userData));
+            setUser(companyData);
+            localStorage.setItem('irep_company_user', JSON.stringify(companyData));
           }
         } catch (err) {
           console.warn('[AuthContext] Session expired or invalid on startup');
@@ -60,25 +64,25 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const res = await resourceApi.post('/api/auth/login', { email, password });
     if (res.data.success) {
-      const { token: receivedToken, user: receivedUser } = res.data.data;
-      localStorage.setItem('resource_exchange_token', receivedToken);
-      localStorage.setItem('resource_exchange_user', JSON.stringify(receivedUser));
+      const { token: receivedToken, company: receivedCompany } = res.data.data;
+      localStorage.setItem('irep_company_token', receivedToken);
+      localStorage.setItem('irep_company_user', JSON.stringify(receivedCompany));
       setToken(receivedToken);
-      setUser(receivedUser);
-      return receivedUser;
+      setUser(receivedCompany);
+      return receivedCompany;
     }
     throw new Error(res.data.message || 'Login failed');
   };
 
-  const register = async (userData) => {
-    const res = await resourceApi.post('/api/auth/register', userData);
+  const register = async (companyData) => {
+    const res = await resourceApi.post('/api/auth/register', companyData);
     if (res.data.success) {
-      const { token: receivedToken, user: receivedUser } = res.data.data;
-      localStorage.setItem('resource_exchange_token', receivedToken);
-      localStorage.setItem('resource_exchange_user', JSON.stringify(receivedUser));
+      const { token: receivedToken, company: receivedCompany } = res.data.data;
+      localStorage.setItem('irep_company_token', receivedToken);
+      localStorage.setItem('irep_company_user', JSON.stringify(receivedCompany));
       setToken(receivedToken);
-      setUser(receivedUser);
-      return receivedUser;
+      setUser(receivedCompany);
+      return receivedCompany;
     }
     throw new Error(res.data.message || 'Registration failed');
   };
@@ -87,8 +91,10 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        company: user,
         token,
         isAuthenticated: !!token && !!user,
+        isAdmin: user?.role === 'admin',
         loading,
         login,
         register,

@@ -1,17 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const {
-  registerStudent,
-  loginStudent,
+  registerCompany,
+  loginCompany,
   getMe,
-  getStudentProfile
+  getCompaniesForAdmin,
+  verifyCompany
 } = require('../controllers/authController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 const { authLimiter } = require('../middleware/rateLimiter');
 
-router.post('/register', authLimiter, registerStudent);
-router.post('/login', authLimiter, loginStudent);
+router.post('/register', authLimiter, registerCompany);
+router.post('/login', authLimiter, loginCompany);
 router.get('/me', protect, getMe);
-router.get('/profile/:id', getStudentProfile);
+
+// Admin review endpoints
+router.get('/admin/companies', protect, adminOnly, getCompaniesForAdmin);
+router.patch('/admin/companies/:id/verify', protect, adminOnly, verifyCompany);
 
 module.exports = router;

@@ -1,96 +1,43 @@
 {
   "info": {
     "_postman_id": "8f7e2a1b-3c4d-5e6f-7a8b-9c0d1e2f3a4b",
-    "name": "Resource Exchange Platform - Microservices API Collection",
-    "description": "Comprehensive API collection for the Resource Exchange Platform covering student authentication, resource management, exchange requests, inter-service REST communication, and error handling edge cases.",
+    "name": "Industrial Resource Exchange Platform (IREP) API Collection",
+    "description": "Comprehensive API collection for the Industrial Resource Exchange Platform (IREP). Validates enterprise authentication, industrial catalog CRUD, procurement requirements, cross-service circular matching, B2B exchange lifecycle, atomic quantity reservation, and admin governance.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Health Checks",
+      "name": "0. Health Checks",
       "item": [
         {
           "name": "Resource Service Health",
           "request": {
             "method": "GET",
-            "header": [],
             "url": {
               "raw": "{{resource_service_url}}/health",
               "host": ["{{resource_service_url}}"],
               "path": ["health"]
             }
-          },
-          "response": []
+          }
         },
         {
           "name": "Exchange Service Health",
           "request": {
             "method": "GET",
-            "header": [],
             "url": {
               "raw": "{{exchange_service_url}}/health",
               "host": ["{{exchange_service_url}}"],
               "path": ["health"]
             }
-          },
-          "response": []
+          }
         }
       ]
     },
     {
-      "name": "1. Student Authentication",
+      "name": "1. Corporate Authentication & Admin Review",
       "item": [
         {
-          "name": "Register Student (Priya Sharma)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    var json = pm.response.json();",
-                  "    pm.environment.set('student_token', json.data.token);",
-                  "    pm.environment.set('student_id', json.data.user.id);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Priya Sharma\",\n  \"email\": \"priya.sharma@apex.edu\",\n  \"password\": \"Password@123\",\n  \"collegeName\": \"Apex Engineering Institute\",\n  \"department\": \"Computer Science and Engineering\"\n}"
-            },
-            "url": {
-              "raw": "{{resource_service_url}}/api/auth/register",
-              "host": ["{{resource_service_url}}"],
-              "path": ["api", "auth", "register"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Register Student - Reject Duplicate Email (Negative)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Duplicate Priya\",\n  \"email\": \"priya.sharma@apex.edu\",\n  \"password\": \"Password@123\"\n}"
-            },
-            "url": {
-              "raw": "{{resource_service_url}}/api/auth/register",
-              "host": ["{{resource_service_url}}"],
-              "path": ["api", "auth", "register"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Login Student (Rahul Verma)",
+          "name": "Login Supplier (Apex Textiles)",
           "event": [
             {
               "listen": "test",
@@ -98,8 +45,7 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    var json = pm.response.json();",
-                  "    pm.environment.set('second_student_token', json.data.token);",
-                  "    pm.environment.set('second_student_id', json.data.user.id);",
+                  "    pm.environment.set('supplier_token', json.data.token);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -111,47 +57,88 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"rahul.verma@apex.edu\",\n  \"password\": \"Password@123\"\n}"
+              "raw": "{\n  \"email\": \"karthik@apextextiles.com\",\n  \"password\": \"Password@123\"\n}"
             },
             "url": {
               "raw": "{{resource_service_url}}/api/auth/login",
               "host": ["{{resource_service_url}}"],
               "path": ["api", "auth", "login"]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "Login - Invalid Password (Negative)",
+          "name": "Login Receiver (Kalyani Forge)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.environment.set('receiver_token', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"rahul.verma@apex.edu\",\n  \"password\": \"WrongSecret\"\n}"
+              "raw": "{\n  \"email\": \"rajesh@kalyaniforge.com\",\n  \"password\": \"Password@123\"\n}"
             },
             "url": {
               "raw": "{{resource_service_url}}/api/auth/login",
               "host": ["{{resource_service_url}}"],
               "path": ["api", "auth", "login"]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "Get Authenticated Profile (/me)",
+          "name": "Login Admin (IREP Governance)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.environment.set('admin_token', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@irep.gov.in\",\n  \"password\": \"AdminPassword@123\"\n}"
+            },
+            "url": {
+              "raw": "{{resource_service_url}}/api/auth/login",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Admin: List Companies for Verification",
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
             ],
             "url": {
-              "raw": "{{resource_service_url}}/api/auth/me",
+              "raw": "{{resource_service_url}}/api/auth/admin/companies",
               "host": ["{{resource_service_url}}"],
-              "path": ["api", "auth", "me"]
+              "path": ["api", "auth", "admin", "companies"]
             }
-          },
-          "response": []
+          }
         }
       ]
     },
@@ -159,7 +146,7 @@
       "name": "2. Resource Service CRUD & Search",
       "item": [
         {
-          "name": "Create Resource Listing (Lend CLRS Book)",
+          "name": "Publish Industrial By-Product",
           "event": [
             {
               "listen": "test",
@@ -167,7 +154,7 @@
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    var json = pm.response.json();",
-                  "    pm.environment.set('resource_id', json.data._id);",
+                  "    pm.environment.set('resource_id', json.data._id || json.data.id);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -178,149 +165,61 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+              { "key": "Authorization", "value": "Bearer {{supplier_token}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Introduction to Algorithms (CLRS 3rd Ed)\",\n  \"description\": \"Complete algorithms reference covering dynamic programming, graph analysis, and sorting. Pristine condition.\",\n  \"category\": \"Textbooks\",\n  \"listingType\": \"Lend\",\n  \"condition\": \"Like New\",\n  \"lendingDuration\": \"14 days\",\n  \"location\": \"Central Campus Library, Floor 2\",\n  \"imageUrl\": \"https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80\"\n}"
+              "raw": "{\n  \"title\": \"Postman Test 100% Comber Noil Cotton Scraps\",\n  \"category\": \"Textile and fabric waste\",\n  \"resourceType\": \"By-product\",\n  \"description\": \"Clean dry unbleached textile fibers from carding process.\",\n  \"totalQuantity\": 2500,\n  \"availableQuantity\": 2500,\n  \"unit\": \"kg\",\n  \"materialCondition\": \"Production Scrap\",\n  \"composition\": \"100% Raw Cotton Cellulose\",\n  \"pricePerUnit\": 28,\n  \"currency\": \"INR\",\n  \"minOrderQuantity\": 100,\n  \"pickupLocation\": {\n    \"address\": \"Plot 42, SIDCO Industrial Estate\",\n    \"city\": \"Coimbatore\",\n    \"state\": \"Tamil Nadu\",\n    \"country\": \"India\",\n    \"loadingEquipmentAvailable\": true\n  },\n  \"compliance\": {\n    \"hazardousMaterial\": false,\n    \"pcbCategory\": \"Green (Non-hazardous residue)\"\n  }\n}"
             },
             "url": {
               "raw": "{{resource_service_url}}/api/resources",
               "host": ["{{resource_service_url}}"],
               "path": ["api", "resources"]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "Create Resource - Unauthorized (Negative)",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Unauthorized Book\"\n}"
-            },
-            "url": {
-              "raw": "{{resource_service_url}}/api/resources",
-              "host": ["{{resource_service_url}}"],
-              "path": ["api", "resources"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get All Resources (Paginated & Filtered)",
+          "name": "Get All Resources (with category filter)",
           "request": {
             "method": "GET",
-            "header": [],
             "url": {
-              "raw": "{{resource_service_url}}/api/resources?page=1&limit=10&availability=available",
+              "raw": "{{resource_service_url}}/api/resources?category=Textile and fabric waste",
               "host": ["{{resource_service_url}}"],
               "path": ["api", "resources"],
-              "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "availability", "value": "available" }
-              ]
+              "query": [{ "key": "category", "value": "Textile and fabric waste" }]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "Search Resources by Keyword",
+          "name": "Get Resource By ID",
           "request": {
             "method": "GET",
-            "header": [],
             "url": {
-              "raw": "{{resource_service_url}}/api/resources/search?q=Algorithms",
+              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources", "{{resource_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Keyword Search Resources",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources/search?q=cotton",
               "host": ["{{resource_service_url}}"],
               "path": ["api", "resources", "search"],
-              "query": [{ "key": "q", "value": "Algorithms" }]
+              "query": [{ "key": "q", "value": "cotton" }]
             }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Single Resource by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}",
-              "host": ["{{resource_service_url}}"],
-              "path": ["api", "resources", "{{resource_id}}"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update Resource Listing (Owner Only)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{student_token}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Introduction to Algorithms (CLRS 3rd Ed) - Updated Edition\",\n  \"lendingDuration\": \"21 days\"\n}"
-            },
-            "url": {
-              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}",
-              "host": ["{{resource_service_url}}"],
-              "path": ["api", "resources", "{{resource_id}}"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update Resource - Non-Owner Edit (Negative 403)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Unauthorized Modification Attempt\"\n}"
-            },
-            "url": {
-              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}",
-              "host": ["{{resource_service_url}}"],
-              "path": ["api", "resources", "{{resource_id}}"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Patch Resource Availability (Service Key / Owner)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "x-service-api-key", "value": "{{service_api_key}}" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"availabilityStatus\": \"available\"\n}"
-            },
-            "url": {
-              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}/availability",
-              "host": ["{{resource_service_url}}"],
-              "path": ["api", "resources", "{{resource_id}}", "availability"]
-            }
-          },
-          "response": []
+          }
         }
       ]
     },
     {
-      "name": "3. Exchange Service & REST Coordination",
+      "name": "3. Material Requirements & Matching Engine",
       "item": [
         {
-          "name": "Submit Exchange Request (Triggers REST Verification)",
+          "name": "Post Material Requirement (Procurement Need)",
           "event": [
             {
               "listen": "test",
@@ -328,7 +227,7 @@
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    var json = pm.response.json();",
-                  "    pm.environment.set('exchange_id', json.data._id);",
+                  "    pm.environment.set('requirement_id', json.data._id || json.data.id);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -339,129 +238,157 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
+              { "key": "Authorization", "value": "Bearer {{receiver_token}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resourceId\": \"{{resource_id}}\",\n  \"requestMessage\": \"Hi Priya, I need the CLRS book for our upcoming algorithm midterm test.\",\n  \"durationRequested\": \"10 days\"\n}"
+              "raw": "{\n  \"materialCategory\": \"Textile and fabric waste\",\n  \"materialTitle\": \"Raw Cotton Waste for Insulation\",\n  \"specificationDetails\": \"Clean dry unbleached fiber scraps with low dust.\",\n  \"requiredQuantity\": 500,\n  \"unit\": \"kg\",\n  \"acceptableCondition\": \"Production Scrap\",\n  \"deliveryLocation\": {\n    \"city\": \"Coimbatore\",\n    \"state\": \"Tamil Nadu\",\n    \"country\": \"India\"\n  },\n  \"maxBudgetPerUnit\": 35,\n  \"currency\": \"INR\"\n}"
             },
             "url": {
-              "raw": "{{exchange_service_url}}/api/exchanges",
+              "raw": "{{exchange_service_url}}/api/requirements",
               "host": ["{{exchange_service_url}}"],
-              "path": ["api", "exchanges"]
+              "path": ["api", "requirements"]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "Submit Request - Requesting Own Resource (Negative 400)",
+          "name": "Run Circular Matching Engine (REST Call to Resource Service)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{receiver_token}}" }
+            ],
+            "url": {
+              "raw": "{{exchange_service_url}}/api/matches/{{requirement_id}}",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["api", "matches", "{{requirement_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Exchange Proposals & Stock Reservations",
+      "item": [
+        {
+          "name": "Create Exchange Proposal (Submits B2B Proposal)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.environment.set('exchange_id', json.data._id || json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+              { "key": "Authorization", "value": "Bearer {{receiver_token}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resourceId\": \"{{resource_id}}\",\n  \"requestMessage\": \"Self request attempt\"\n}"
+              "raw": "{\n  \"resourceId\": \"{{resource_id}}\",\n  \"requestedQuantity\": 500,\n  \"unit\": \"kg\",\n  \"proposedPricePerUnit\": 26,\n  \"currency\": \"INR\",\n  \"proposalMessage\": \"Intend to reprocess cotton fiber into acoustic insulation panels.\",\n  \"deliveryTerms\": \"Ex-Works pickup arranged by buyer logistics\",\n  \"complianceAck\": true\n}"
             },
             "url": {
               "raw": "{{exchange_service_url}}/api/exchanges",
               "host": ["{{exchange_service_url}}"],
               "path": ["api", "exchanges"]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "Submit Request - Duplicate Pending (Negative 400)",
+          "name": "Add Negotiation Message / Counter Offer",
           "request": {
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
+              { "key": "Authorization", "value": "Bearer {{supplier_token}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resourceId\": \"{{resource_id}}\",\n  \"requestMessage\": \"Duplicate request\"\n}"
+              "raw": "{\n  \"message\": \"Can dispatch on Friday. Minimum viable rate is ₹27/kg for this batch.\",\n  \"proposedPrice\": 27\n}"
             },
             "url": {
-              "raw": "{{exchange_service_url}}/api/exchanges",
+              "raw": "{{exchange_service_url}}/api/exchanges/{{exchange_id}}/negotiate",
               "host": ["{{exchange_service_url}}"],
-              "path": ["api", "exchanges"]
+              "path": ["api", "exchanges", "{{exchange_id}}", "negotiate"]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "Get Sent Requests",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
-            ],
-            "url": {
-              "raw": "{{exchange_service_url}}/api/exchanges/sent",
-              "host": ["{{exchange_service_url}}"],
-              "path": ["api", "exchanges", "sent"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Received Requests (Owner Perspective)",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{student_token}}" }
-            ],
-            "url": {
-              "raw": "{{exchange_service_url}}/api/exchanges/received",
-              "host": ["{{exchange_service_url}}"],
-              "path": ["api", "exchanges", "received"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Approve Request (Coordinates REST Lock on Resource Service)",
+          "name": "Accept Proposal (Coordinates Atomic Stock Reservation)",
           "request": {
             "method": "PATCH",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{student_token}}" }
+              { "key": "Authorization", "value": "Bearer {{supplier_token}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"Approved\",\n  \"note\": \"Approved! You can collect it at the library 2nd floor.\"\n}"
+              "raw": "{\n  \"status\": \"Accepted\"\n}"
             },
             "url": {
               "raw": "{{exchange_service_url}}/api/exchanges/{{exchange_id}}/status",
               "host": ["{{exchange_service_url}}"],
               "path": ["api", "exchanges", "{{exchange_id}}", "status"]
             }
-          },
-          "response": []
+          }
         },
         {
-          "name": "Cancel Request (Coordinates REST Availability Restoration)",
+          "name": "Verify Reserved Quantity on Resource Service",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{resource_service_url}}/api/resources/{{resource_id}}",
+              "host": ["{{resource_service_url}}"],
+              "path": ["api", "resources", "{{resource_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Dispatch Consignment (Status: In Transfer)",
           "request": {
             "method": "PATCH",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{second_student_token}}" }
+              { "key": "Authorization", "value": "Bearer {{supplier_token}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reason\": \"Midterm schedule changed, no longer required.\"\n}"
+              "raw": "{\n  \"status\": \"In Transfer\",\n  \"transferTracking\": {\n    \"carrierName\": \"VRL Logistics Ltd\",\n    \"trackingRef\": \"TRK-BLR-004921\",\n    \"transferNotes\": \"Dispatched in 10 baled bundles on open truck.\"\n  }\n}"
             },
             "url": {
-              "raw": "{{exchange_service_url}}/api/exchanges/{{exchange_id}}/cancel",
+              "raw": "{{exchange_service_url}}/api/exchanges/{{exchange_id}}/status",
               "host": ["{{exchange_service_url}}"],
-              "path": ["api", "exchanges", "{{exchange_id}}", "cancel"]
+              "path": ["api", "exchanges", "{{exchange_id}}", "status"]
             }
-          },
-          "response": []
+          }
+        },
+        {
+          "name": "Mark Complete (Permanently Deducts Reserved Stock)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{supplier_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Completed\"\n}"
+            },
+            "url": {
+              "raw": "{{exchange_service_url}}/api/exchanges/{{exchange_id}}/status",
+              "host": ["{{exchange_service_url}}"],
+              "path": ["api", "exchanges", "{{exchange_id}}", "status"]
+            }
+          }
         }
       ]
     }

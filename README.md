@@ -1,16 +1,15 @@
-# 📚 Resource Exchange Platform (ResourceHub)
-### Professional Full-Stack Web Application with Microservices Architecture
-**Course Project**: Full Stack Application Lab (CAT 2)  
-**Architecture**: Decoupled Microservices with REST API Communication  
+# 🏭 Industrial Resource Exchange Platform (IREP)
+### Full-Stack Industrial By-Product and Surplus Resource Marketplace
+**System Architecture**: Decoupled Microservices with Isolated Databases & REST Coordination  
 **Tech Stack**: MERN (MongoDB Atlas, Express.js, React.js with Vite, Node.js) + Tailwind CSS
 
 ---
 
 ## 🌟 Executive Summary
 
-The **Resource Exchange Platform** is a production-style, microservices-based web application designed for college students to share, lend, exchange, donate, and discover academic resources across campus (textbooks, handwritten lecture notes, laboratory kits, calculators, and stationery).
+The **Industrial Resource Exchange Platform (IREP)** is a production-grade B2B digital marketplace engineered to facilitate **industrial circular symbiosis**. The platform connects manufacturing facilities that generate surplus, by-product, recyclable, or recoverable materials with secondary industrial processors that utilize those materials as manufacturing inputs.
 
-Rather than a monolithic server, the system is architected into **two autonomous, independently deployable backend microservices** with **separate MongoDB databases**, communicating via **genuine server-to-server HTTP REST APIs**.
+Rather than a monolithic backend, the platform is architected into **two independent, autonomous microservices** (`resource-service` on port 5001 and `exchange-service` on port 5002) with **isolated MongoDB databases** (`irep_resources_db` and `irep_exchanges_db`), communicating via **authentic server-to-server HTTP REST APIs** protected by a shared secret (`x-service-api-key`).
 
 ---
 
@@ -23,219 +22,156 @@ graph TD
     end
 
     subgraph Microservice Layer
-        RS["📦 Resource Service (Port 5001 / Cloud)\nNode.js • Express.js\nJWT Auth • Resource Inventory • Search"]
-        ES["🤝 Exchange Service (Port 5002 / Cloud)\nNode.js • Express.js\nRequest Negotiations • Conflict Prevention"]
+        RS["🏭 Resource Catalog Service (Port 5001 / Cloud)\nNode.js • Express.js\nCorporate Auth • Material Catalog • Stock Tracking"]
+        ES["🔄 Exchange & Matching Service (Port 5002 / Cloud)\nNode.js • Express.js\nCircular Matching • B2B Proposals • Transfer Tracking"]
     end
 
     subgraph Data Persistence Layer
-        RDB[("🗄️ MongoDB Database\nresource_exchange_resources")]
-        EDB[("🗄️ MongoDB Database\nresource_exchange_exchanges")]
+        RDB[("🗄️ MongoDB: irep_resources_db\nCompanies & Resources Collections")]
+        EDB[("🗄️ MongoDB: irep_exchanges_db\nRequirements & Exchanges Collections")]
     end
 
     UI -->|"HTTP REST (JWT Auth)\n/api/auth/* & /api/resources/*"| RS
-    UI -->|"HTTP REST (JWT Auth)\n/api/exchanges/*"| ES
+    UI -->|"HTTP REST (JWT Auth)\n/api/requirements/*, /api/matches/*, /api/exchanges/*"| ES
 
     RS -->|"Mongoose ODM (Isolated)"| RDB
     ES -->|"Mongoose ODM (Isolated)"| EDB
 
-    ES -.->|"⚡ Inter-Service REST Calls\nGET /api/resources/:id\nPATCH /api/resources/:id/availability\nHeader: x-service-api-key"| RS
-```
-
-### 1. Resource Service (`resource-service`, Port 5001)
-- Student registration, login, and JWT-based authentication.
-- Resource listing CRUD (Create, Read, Update, Delete).
-- Full-text keyword search and multi-parameter filtering (Category, Listing Type, Availability, Condition).
-- Availability management (`available`, `reserved`, `exchanged`, `unavailable`).
-- Internal REST endpoint (`PATCH /api/resources/:id/availability`) guarded by `x-service-api-key`.
-
-### 2. Exchange Service (`exchange-service`, Port 5002)
-- Exchange and borrow request management (`Pending`, `Approved`, `Rejected`, `Cancelled`, `Completed`).
-- Inter-service REST verification: Queries Resource Service via REST (`GET /api/resources/:id`) to verify resource existence and availability before creating requests.
-- Prevents students from requesting their own resources.
-- Prevents duplicate pending requests for the same resource.
-- When an owner approves a request, calls Resource Service via REST (`PATCH /api/resources/:id/availability`) to lock status to `reserved`.
-- When an approved request is cancelled, calls Resource Service via REST to restore status to `available`.
-
-### 3. Frontend Client (`frontend`, Port 5173)
-- Built with React 19 and Vite.
-- Styled with Tailwind CSS (clean light theme with navy, crisp white, and subtle teal accents).
-- 13 complete, interactive pages:
-  1. **Landing Page (`/`)**: Hero, statistics, category benefits, and featured available resources.
-  2. **Register (`/register`)**: Student registration with input validation.
-  3. **Login (`/login`)**: Login form with **1-click demo login buttons** for instant evaluation.
-  4. **Student Dashboard (`/dashboard`)**: Personal activity metrics, incoming request alerts, and quick actions.
-  5. **Resource Marketplace (`/marketplace`)**: Live search, category and listing-type filters, pagination.
-  6. **Resource Details (`/resources/:id`)**: Comprehensive view, owner details, campus pickup location, and Request Resource modal.
-  7. **Add Resource (`/add-resource`)**: Listing form with instant sample image presets.
-  8. **Edit Resource (`/edit-resource/:id`)**: Owner edit form.
-  9. **My Listings (`/my-listings`)**: Inventory manager with quick edit, status toggle, and delete dialog.
-  10. **Sent Requests (`/requests/sent`)**: Outbound requests with status badges and cancel action.
-  11. **Received Requests (`/requests/received`)**: Inbound requests with Approve and Reject actions.
-  12. **Exchange History (`/history`)**: Full audit log of all completed, cancelled, and rejected exchanges.
-  13. **Student Profile (`/profile`)**: Student card with verified badge and activity counters.
-  14. **404 Not Found (`*`)**: Custom error page.
-
----
-
-## 📁 Repository Structure
-
-```text
-resource-exchange-platform/
-├── frontend/                     # React Vite Single Page App
-│   ├── src/
-│   │   ├── api/client.js         # Axios instances for both microservices
-│   │   ├── components/           # Navbar, Sidebar, ResourceCard, Modals, Badges
-│   │   ├── context/              # AuthContext & ToastContext
-│   │   ├── pages/                # 13 Complete Application Pages
-│   │   └── App.jsx               # Routes and layout
-│   ├── .env.example
-│   ├── tailwind.config.js
-│   ├── vercel.json               # Vercel SPA routing rewrites
-│   └── package.json
-│
-├── resource-service/             # Microservice 1: Resources & Auth
-│   ├── src/
-│   │   ├── config/db.js          # MongoDB Atlas & Fallback connection
-│   │   ├── controllers/          # authController & resourceController
-│   │   ├── middleware/           # authMiddleware & serviceAuthMiddleware
-│   │   ├── models/               # User.js & Resource.js schemas
-│   │   ├── routes/               # authRoutes, resourceRoutes, healthRoutes
-│   │   └── scripts/seed.js       # Demo accounts & realistic resources
-│   ├── tests/                    # Automated integration test suite
-│   ├── .env.example
-│   ├── server.js
-│   └── package.json
-│
-├── exchange-service/             # Microservice 2: Requests & Coordination
-│   ├── src/
-│   │   ├── config/db.js          # Isolated MongoDB connection
-│   │   ├── controllers/          # exchangeController (REST coordination)
-│   │   ├── middleware/           # authMiddleware & errorHandler
-│   │   ├── models/               # Exchange.js schema & history
-│   │   ├── routes/               # exchangeRoutes & healthRoutes
-│   │   ├── services/             # resourceClient.js (Outbound REST client)
-│   │   └── scripts/seed.js
-│   ├── tests/                    # Automated integration test suite
-│   ├── .env.example
-│   ├── server.js
-│   └── package.json
-│
-├── postman/
-│   ├── Resource_Exchange_Platform.postman_collection.json
-│   └── Resource_Exchange_Platform.postman_environment.json
-│
-├── docs/
-│   ├── architecture.md           # Architecture diagrams & sequence flows
-│   ├── api-documentation.md      # Full REST endpoint schemas
-│   ├── deployment-guide.md       # Vercel, Render & MongoDB Atlas guide
-│   ├── testing-report.md         # Automated test matrices & logs
-│   └── project-report.md         # Academic lab project report
-│
-├── render.yaml                   # Render Blueprint for cloud deployment
-├── package.json                  # Root monorepo orchestration scripts
-└── README.md
+    ES -.->|"⚡ Genuine Inter-Service REST Calls\nGET /api/resources/:id\nGET /api/resources/matches\nPATCH /api/resources/:id/reserve\nHeader: x-service-api-key"| RS
 ```
 
 ---
 
-## ⚡ Quick Start (Local Development)
+## 📦 The 10 Industrial Material Categories
 
-### Prerequisites
-- Node.js (v18 or higher)
-- npm (v9 or higher)
-- Optional: MongoDB running locally or MongoDB Atlas connection string (Application includes automated fallback if none is provided).
+1. **Textile and fabric waste**: Cotton comber noil, yarn offcuts, polyester trimmings.
+2. **Metal scraps**: High-carbon steel turning scraps, aluminum borings, copper slag.
+3. **Plastic waste and reusable polymers**: Recycled HDPE flakes, clean post-industrial PP granules.
+4. **Paper and cardboard**: Corrugated cardboard bales, unbleached kraft paper trims.
+5. **Wood scraps and sawdust**: Kiln-dried pine sawdust, wood chip residues.
+6. **Agricultural by-products**: Bagasse, rice husk, coconut coir pith.
+7. **Construction and demolition materials**: Crushed concrete aggregate, reclaimed bricks.
+8. **Reusable industrial packaging**: 210-litre steel drums, chemical IBC totes, wooden euro pallets.
+9. **Surplus raw materials**: Overstock virgin pigments, masterbatches, industrial solvents.
+10. **Other recoverable industrial by-products**: Fly ash, furnace slag, spent foundry sand.
 
-### 1. Install All Dependencies
-From the repository root directory:
+---
+
+## 🖥️ 17 Functional Frontend Pages
+
+1. **Landing Page (`/`)**: Circular economy principles, industrial statistics (landfill diversion, CO2 abatement), and catalog preview.
+2. **Corporate Sign In (`/login`)**: Enterprise login featuring **1-click evaluator demo accounts**.
+3. **Enterprise Registration (`/register`)**: Corporate onboarding with GSTIN/CIN reference, industrial sector, and facility address.
+4. **Industrial Dashboard (`/dashboard`)**: Inventory statistics, active proposals, recent transactions, and microservice REST health indicators.
+5. **Material Marketplace (`/marketplace`)**: Search, multi-criteria filtering, and **Grid Card / Registry Table view switcher**.
+6. **Material Details (`/resources/:id`)**: Technical specifications, composition, pickup facility, MSDS compliance, and B2B proposal launcher.
+7. **Publish Resource (`/add-resource` / `/publish-resource`)**: Material registration with volume, unit rates, safety instructions, and hazardous declarations.
+8. **Edit Resource (`/edit-resource/:id`)**: Edit specifications, inventory availability, and indicative prices.
+9. **Enterprise Inventory (`/my-listings`)**: Track unreserved vs. reserved quantities across listings with status controls and deletion.
+10. **Post Procurement Need (`/requirements/new`)**: Material procurement form with required volumes, quality thresholds, and budget caps.
+11. **Circular Matching Results (`/matching`)**: Cross-service circular matching engine returning ranked listings with **Compatibility Scores (0–100%)** and factor breakdown insights.
+12. **Outbound Proposals (`/requests/sent`)**: Monitor procurement proposals, counter-offers, and cancellation actions.
+13. **Inbound Proposals (`/requests/received`)**: Review incoming bids with **Accept (coordinates atomic stock reservation over REST)** and Decline actions.
+14. **Negotiation & Exchange Details (`/exchanges/:id`)**: Price counter-proposals, discussion thread, and microservice audit timeline.
+15. **Transfer Tracking & History (`/history`)**: Freight consignment tracking (carrier, waybill ref, dispatch date) and completed transfer logs.
+16. **Enterprise Profile (`/profile`)**: Corporate profile with GSTIN reference, sector, and official **Verification Badge** (`Verified`, `Pending`, `Rejected`).
+17. **Admin Dashboard (`/admin`)**: Company verification queue (approving/rejecting registrations) and catalog listing moderation.
+
+---
+
+## ⚡ 1-Click Fast Evaluator Accounts
+
+On the `/login` screen, evaluators can click any of the pre-configured enterprise buttons to instantly sign in without manual typing:
+
+| Enterprise Name | Role / Sector | Login Email | Password | Location |
+| :--- | :--- | :--- | :--- | :--- |
+| **Apex Industrial Textiles** | Supplier & Receiver (Textiles) | `karthik@apextextiles.com` | `Password@123` | Coimbatore, TN |
+| **Kalyani Forge & Alloy** | Supplier & Receiver (Metals) | `rajesh@kalyaniforge.com` | `Password@123` | Pune, MH |
+| **GreenLeaf Polymers** | Supplier & Receiver (Plastics) | `sneha@greenleafpolymers.com` | `Password@123` | Vadodara, GJ |
+| **Sahyadri Eco-Board** | Supplier & Receiver (Woodwork) | `mahesh@sahyadriboards.com` | `Password@123` | Hubballi, KA |
+| **Platform Administrator** | Platform Governance & Verification | `admin@irep.gov.in` | `AdminPassword@123` | National Portal |
+
+---
+
+## 🚀 How to Run Locally
+
+### Option A: 1-Click Windows Launcher (Recommended)
+Double-click `run.bat` in the root folder. It will automatically:
+1. Check dependencies across all three applications.
+2. Clean any lingering processes on ports `5001`, `5002`, and `5173`.
+3. Seed demonstration industrial accounts and catalog listings into both databases.
+4. Launch Resource Service (:5001), Exchange Service (:5002), and Frontend (:5173) in independent terminal windows.
+5. Launch your browser directly to `http://localhost:5173`.
+
+To cleanly terminate all running services at any time, run `stop.bat`.
+
+---
+
+### Option B: Manual Multi-Terminal Startup
+
+#### Terminal 1: Resource Service (Port 5001)
 ```bash
-npm run install:all
-```
-*(Or install inside each directory: `cd resource-service && npm install`, `cd ../exchange-service && npm install`, `cd ../frontend && npm install`)*
-
-### 2. Seed Demo Accounts & Resources
-```bash
-npm run seed:all
-```
-This populates the database with 3 realistic college student accounts and 8 active resources across Textbooks, Notes, Lab Equipment, Stationery, and Tools.
-
-### 3. Run the Applications
-In three separate terminal windows:
-```bash
-# Terminal 1: Resource Service (Port 5001)
 cd resource-service
-npm run dev
+npm install
+npm run seed
+npm start
+```
 
-# Terminal 2: Exchange Service (Port 5002)
+#### Terminal 2: Exchange Service (Port 5002)
+```bash
 cd exchange-service
-npm run dev
+npm install
+npm run seed
+npm start
+```
 
-# Terminal 3: React Frontend (Port 5173)
+#### Terminal 3: React Frontend Client (Port 5173)
+```bash
 cd frontend
+npm install
 npm run dev
 ```
 
-Open your browser at **`http://localhost:5173`**.
-
 ---
 
-## 👤 Seeded Demonstration Accounts
+## 🧪 Automated Testing & Postman
 
-For fast evaluation and grading, the login page (`/login`) includes **1-click login buttons** for:
-
-| Student Name | Department | Email | Password |
-| :--- | :--- | :--- | :--- |
-| **Priya Sharma** | Computer Science & Engg | `priya.sharma@apex.edu` | `Password@123` |
-| **Rahul Verma** | Electronics & Comm | `rahul.verma@apex.edu` | `Password@123` |
-| **Ananya Iyer** | Mechanical Engg | `ananya.iyer@apex.edu` | `Password@123` |
-
----
-
-## 🧪 Running Automated Tests
-
-Run the complete test suite verifying both microservices and cross-service REST communication:
-
+### Running Automated Test Suites
+Both microservices include automated unit and integration tests using Jest and Supertest:
 ```bash
-# Test Resource Service (13 Tests)
+# Run Resource Service tests (7/7 passed)
 cd resource-service
 npm test
 
-# Test Exchange Service (9 Tests)
+# Run Exchange Service tests (6/6 passed)
 cd exchange-service
 npm test
-
-# Verify Frontend Production Build
-cd frontend
-npm run build
 ```
 
-**Results**: All **22 automated tests pass (100% success rate)**. See [docs/testing-report.md](docs/testing-report.md) for full execution logs.
-
----
-
-## ☁️ Independent Cloud Deployment
-
-All components are configured for independent cloud deployment:
-1. **Frontend**: Deployed to **Vercel** with SPA rewrites (`frontend/vercel.json`).
-   - Env: `VITE_RESOURCE_SERVICE_URL`, `VITE_EXCHANGE_SERVICE_URL`.
-2. **Resource Service**: Deployed to **Render** as a Node.js Web Service.
-   - Env: `PORT`, `MONGODB_URI`, `JWT_SECRET`, `SERVICE_API_KEY`, `CLIENT_ORIGIN`.
-3. **Exchange Service**: Deployed to **Render** as an independent Node.js Web Service.
-   - Env: `PORT`, `MONGODB_URI`, `JWT_SECRET`, `RESOURCE_SERVICE_URL`, `SERVICE_API_KEY`, `CLIENT_ORIGIN`.
-4. **Render Blueprint**: You can deploy both backend services at once using [`render.yaml`](render.yaml).
-
-For complete step-by-step cloud deployment instructions, see [docs/deployment-guide.md](docs/deployment-guide.md).
-
----
-
-## 📮 Postman Collection
-
-Import the included Postman collection and environment located in `postman/`:
+### Postman Collections
+Import the pre-configured collections located in the `postman/` directory:
 - `postman/Resource_Exchange_Platform.postman_collection.json`
 - `postman/Resource_Exchange_Platform.postman_environment.json`
 
-Covers registration, login, resource CRUD, keyword search, exchange request submission, owner approval with REST lock, cancellation with REST restoration, and negative validation test cases.
+---
+
+## ☁️ Independent Cloud Deployment Guide
+
+| Component | Target Platform | Root Directory | Build Command | Start / Output |
+| :--- | :--- | :--- | :--- | :--- |
+| **Frontend** | Vercel | `frontend` | `npm run build` | `dist` |
+| **Resource Service** | Render | `resource-service` | `npm install` | `npm start` |
+| **Exchange Service** | Render | `exchange-service` | `npm install` | `npm start` |
+| **Databases** | MongoDB Atlas | *N/A* | *Cluster M0* | `irep_resources_db` & `irep_exchanges_db` |
+
+For detailed environment variables and deployment instructions, refer to [`docs/deployment-guide.md`](file:///c:/college/full%20stack%20CAT%202/docs/deployment-guide.md).
 
 ---
 
-## 📄 License & Attribution
-Developed for the **Full Stack Application Lab (CAT 2)** college examination. Built with modern MERN Microservices best practices.
+## 📚 Complete Project Documentation
+
+- **Architecture Documentation**: [`docs/architecture.md`](file:///c:/college/full%20stack%20CAT%202/docs/architecture.md)
+- **API Documentation**: [`docs/api-documentation.md`](file:///c:/college/full%20stack%20CAT%202/docs/api-documentation.md)
+- **Testing & QA Report**: [`docs/testing-report.md`](file:///c:/college/full%20stack%20CAT%202/docs/testing-report.md)
+- **Academic Project Report**: [`docs/project-report.md`](file:///c:/college/full%20stack%20CAT%202/docs/project-report.md)
+- **Deployment Guide**: [`docs/deployment-guide.md`](file:///c:/college/full%20stack%20CAT%202/docs/deployment-guide.md)

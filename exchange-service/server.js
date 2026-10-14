@@ -46,6 +46,7 @@ app.use(async (req, res, next) => {
 // Mount routes
 app.use('/', healthRoutes);
 app.use('/api', healthRoutes);
+app.use('/api', exchangeRoutes);
 app.use('/api/exchanges', exchangeRoutes);
 
 // 404 handler

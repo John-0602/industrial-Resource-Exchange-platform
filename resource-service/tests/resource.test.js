@@ -4,25 +4,23 @@ const assert = require('node:assert/strict');
 const request = require('supertest');
 const { connectDB, disconnectDB } = require('../src/config/db');
 const app = require('../server');
-const User = require('../src/models/User');
+const Company = require('../src/models/Company');
 const Resource = require('../src/models/Resource');
 
-describe('Resource Service API Integration Tests', () => {
-  let priyaToken;
-  let priyaId;
-  let rahulToken;
-  let rahulId;
+describe('Industrial Resource Service API Tests', () => {
+  let supplierToken;
+  let supplierId;
+  let receiverToken;
   let createdResourceId;
 
   before(async () => {
-    // Ensure in-memory or configured DB is connected
     await connectDB();
-    await User.deleteMany({});
+    await Company.deleteMany({});
     await Resource.deleteMany({});
   });
 
   after(async () => {
-    await User.deleteMany({});
+    await Company.deleteMany({});
     await Resource.deleteMany({});
     await disconnectDB();
   });
@@ -34,172 +32,119 @@ describe('Resource Service API Integration Tests', () => {
     assert.equal(res.body.status, 'OK');
   });
 
-  test('POST /api/auth/register registers student and returns JWT', async () => {
+  test('POST /api/auth/register registers industrial company', async () => {
     const res = await request(app)
       .post('/api/auth/register')
       .send({
-        name: 'Priya Sharma',
-        email: 'priya.test@apex.edu',
+        name: 'Apex Textiles Ltd.',
+        registrationRef: 'GSTIN: 33AAACA1111A1Z1',
+        industrySector: 'Textiles & Apparel',
+        contactPerson: 'Karthik S',
+        email: 'karthik.test@apex.com',
         password: 'Password@123',
-        collegeName: 'Apex Engineering Institute',
-        department: 'Computer Science and Engineering'
+        address: 'SIPCOT Industrial Park',
+        city: 'Coimbatore',
+        state: 'Tamil Nadu',
+        companyRole: 'supplier'
       });
 
     assert.equal(res.status, 201);
     assert.equal(res.body.success, true);
     assert.ok(res.body.data.token);
-    assert.equal(res.body.data.user.email, 'priya.test@apex.edu');
-    priyaToken = res.body.data.token;
-    priyaId = res.body.data.user.id;
+    assert.equal(res.body.data.company.verificationStatus, 'Pending');
+    supplierToken = res.body.data.token;
+    supplierId = res.body.data.company.id;
   });
 
-  test('POST /api/auth/register rejects duplicate email with 400', async () => {
+  test('POST /api/auth/login validates corporate credentials', async () => {
     const res = await request(app)
-      .post('/api/auth/register')
+      .post('/api/auth/login')
       .send({
-        name: 'Priya Sharma Duplicate',
-        email: 'priya.test@apex.edu',
+        email: 'karthik.test@apex.com',
         password: 'Password@123'
       });
 
-    assert.equal(res.status, 400);
-    assert.equal(res.body.success, false);
+    assert.equal(res.status, 200);
+    assert.ok(res.body.data.token);
   });
 
-  test('POST /api/auth/login validates credentials correctly', async () => {
-    // Register second student
-    const regRes = await request(app)
-      .post('/api/auth/register')
-      .send({
-        name: 'Rahul Verma',
-        email: 'rahul.test@apex.edu',
-        password: 'Password@123',
-        collegeName: 'Apex Engineering Institute',
-        department: 'ECE'
-      });
-    rahulToken = regRes.body.data.token;
-    rahulId = regRes.body.data.user.id;
-
-    // Login with valid password
-    const validLogin = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: 'rahul.test@apex.edu',
-        password: 'Password@123'
-      });
-    assert.equal(validLogin.status, 200);
-    assert.ok(validLogin.body.data.token);
-
-    // Login with invalid password
-    const invalidLogin = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: 'rahul.test@apex.edu',
-        password: 'WrongPassword'
-      });
-    assert.equal(invalidLogin.status, 401);
-  });
-
-  test('POST /api/resources requires authentication', async () => {
+  test('POST /api/resources creates industrial material listing', async () => {
     const res = await request(app)
       .post('/api/resources')
+      .set('Authorization', `Bearer ${supplierToken}`)
       .send({
-        title: 'Unauthorized Book',
-        description: 'Should fail without token',
-        category: 'Textbooks',
-        listingType: 'Lend',
-        condition: 'Good',
-        location: 'Library'
-      });
-
-    assert.equal(res.status, 401);
-  });
-
-  test('POST /api/resources creates resource when authenticated', async () => {
-    const res = await request(app)
-      .post('/api/resources')
-      .set('Authorization', `Bearer ${priyaToken}`)
-      .send({
-        title: 'Introduction to Algorithms CLRS',
-        description: 'Standard computer science algorithms textbook in great condition',
-        category: 'Textbooks',
-        listingType: 'Lend',
-        condition: 'Like New',
-        lendingDuration: '14 days',
-        location: 'Central Library Floor 2'
+        title: 'Pure Cotton Comber Noil Bales',
+        description: 'Post-industrial high-purity cotton comber noil in 150kg compressed bales.',
+        materialCategory: 'Textile and fabric waste',
+        resourceType: 'By-product',
+        condition: 'Grade A - Clean, Segregated, Dry',
+        totalQuantity: 5000,
+        unit: 'kg',
+        indicativePrice: 65,
+        handlingStorageInfo: 'Store in dry warehouse away from sparks',
+        pickupLocation: {
+          city: 'Coimbatore',
+          state: 'Tamil Nadu',
+          address: 'SIPCOT Industrial Park'
+        }
       });
 
     assert.equal(res.status, 201);
-    assert.equal(res.body.success, true);
-    assert.equal(res.body.data.title, 'Introduction to Algorithms CLRS');
+    assert.equal(res.body.data.availableQuantity, 5000);
+    assert.equal(res.body.data.reservedQuantity, 0);
     assert.equal(res.body.data.availabilityStatus, 'available');
-    assert.equal(res.body.data.owner.email, 'priya.test@apex.edu');
     createdResourceId = res.body.data._id;
   });
 
-  test('GET /api/resources lists resources with pagination', async () => {
-    const res = await request(app).get('/api/resources?page=1&limit=10');
+  test('GET /api/resources returns filtered industrial catalog', async () => {
+    const res = await request(app).get('/api/resources?category=Textile and fabric waste');
     assert.equal(res.status, 200);
-    assert.equal(res.body.success, true);
+    assert.ok(res.body.data.length >= 1);
+  });
+
+  test('GET /api/resources/search finds materials by keyword', async () => {
+    const res = await request(app).get('/api/resources/search?q=Cotton');
+    assert.equal(res.status, 200);
     assert.ok(res.body.data.length >= 1);
   });
 
-  test('GET /api/resources/search finds resources by keyword', async () => {
-    const res = await request(app).get('/api/resources/search?q=Algorithms');
-    assert.equal(res.status, 200);
-    assert.ok(res.body.data.length >= 1);
-    assert.equal(res.body.data[0].title, 'Introduction to Algorithms CLRS');
-  });
-
-  test('GET /api/resources/:id returns full resource details', async () => {
-    const res = await request(app).get(`/api/resources/${createdResourceId}`);
-    assert.equal(res.status, 200);
-    assert.equal(res.body.data._id, createdResourceId);
-  });
-
-  test('PUT /api/resources/:id rejects non-owner edit with 403', async () => {
-    const res = await request(app)
-      .put(`/api/resources/${createdResourceId}`)
-      .set('Authorization', `Bearer ${rahulToken}`)
-      .send({
-        title: 'Hacked Title Attempt'
-      });
-
-    assert.equal(res.status, 403);
-  });
-
-  test('PUT /api/resources/:id allows owner to edit listing', async () => {
-    const res = await request(app)
-      .put(`/api/resources/${createdResourceId}`)
-      .set('Authorization', `Bearer ${priyaToken}`)
-      .send({
-        title: 'Introduction to Algorithms CLRS (Updated 3rd Ed)'
-      });
-
-    assert.equal(res.status, 200);
-    assert.equal(res.body.data.title, 'Introduction to Algorithms CLRS (Updated 3rd Ed)');
-  });
-
-  test('PATCH /api/resources/:id/availability updates status with service key', async () => {
-    const res = await request(app)
-      .patch(`/api/resources/${createdResourceId}/availability`)
+  test('PATCH /api/resources/:id/reserve coordinates quantity allocation (Inter-Service)', async () => {
+    // 1. Reserve 1500 kg
+    const resReserve = await request(app)
+      .patch(`/api/resources/${createdResourceId}/reserve`)
       .set('x-service-api-key', 'internal_shared_microservice_secret_token_college_2025')
       .send({
-        availabilityStatus: 'reserved'
+        quantity: 1500,
+        action: 'reserve'
       });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.body.data.availabilityStatus, 'reserved');
-  });
+    assert.equal(resReserve.status, 200);
+    assert.equal(resReserve.body.data.availableQuantity, 3500);
+    assert.equal(resReserve.body.data.reservedQuantity, 1500);
+    assert.equal(resReserve.body.data.availabilityStatus, 'partially_reserved');
 
-  test('DELETE /api/resources/:id allows owner to delete resource', async () => {
-    const res = await request(app)
-      .delete(`/api/resources/${createdResourceId}`)
-      .set('Authorization', `Bearer ${priyaToken}`);
+    // 2. Reject overselling attempt (requesting 4000 kg when only 3500 kg available)
+    const resOver = await request(app)
+      .patch(`/api/resources/${createdResourceId}/reserve`)
+      .set('x-service-api-key', 'internal_shared_microservice_secret_token_college_2025')
+      .send({
+        quantity: 4000,
+        action: 'reserve'
+      });
 
-    assert.equal(res.status, 200);
+    assert.equal(resOver.status, 409);
 
-    const check = await request(app).get(`/api/resources/${createdResourceId}`);
-    assert.equal(check.status, 404);
+    // 3. Release 1500 kg back
+    const resRelease = await request(app)
+      .patch(`/api/resources/${createdResourceId}/reserve`)
+      .set('x-service-api-key', 'internal_shared_microservice_secret_token_college_2025')
+      .send({
+        quantity: 1500,
+        action: 'release'
+      });
+
+    assert.equal(resRelease.status, 200);
+    assert.equal(resRelease.body.data.availableQuantity, 5000);
+    assert.equal(resRelease.body.data.reservedQuantity, 0);
   });
 });

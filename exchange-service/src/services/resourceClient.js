@@ -21,8 +21,6 @@ const createClient = () => {
 
 /**
  * Fetch resource details directly from the Resource Service over REST
- * @param {string} resourceId 
- * @returns {Promise<Object>}
  */
 const getResourceDetails = async (resourceId) => {
   const client = createClient();
@@ -33,7 +31,7 @@ const getResourceDetails = async (resourceId) => {
 
   try {
     const response = await client.get(endpoint);
-    console.log(`[Exchange Service -> Resource Service] SUCCESS: Retrieved "${response.data.data.title}" (Status: ${response.data.data.availabilityStatus})`);
+    console.log(`[Exchange Service -> Resource Service] SUCCESS: Retrieved "${response.data.data.title}" (Available: ${response.data.data.availableQuantity} ${response.data.data.unit})`);
     return response.data.data;
   } catch (error) {
     if (error.response) {
@@ -42,55 +40,72 @@ const getResourceDetails = async (resourceId) => {
       err.statusCode = error.response.status;
       throw err;
     } else if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-      console.error(`[Exchange Service -> Resource Service] NETWORK ERROR: Unable to connect to Resource Service at ${getBaseUrl()}`);
-      const err = new Error('Resource Service is unreachable. Please ensure resource-service is online.');
+      const err = new Error('Resource Service is unreachable. Please ensure resource-service is running.');
       err.statusCode = 503;
       throw err;
     } else if (error.code === 'ECONNABORTED') {
-      console.error(`[Exchange Service -> Resource Service] TIMEOUT: Request to ${targetUrl} timed out`);
-      const err = new Error('Resource Service timed out. Please try again.');
+      const err = new Error('Resource Service timed out.');
       err.statusCode = 504;
       throw err;
     } else {
-      console.error(`[Exchange Service -> Resource Service] UNKNOWN ERROR:`, error.message);
       throw error;
     }
   }
 };
 
 /**
- * Update resource availability status on the Resource Service over REST
+ * Reserve or release material quantity via inter-service REST call
  * @param {string} resourceId 
- * @param {'available' | 'reserved' | 'exchanged' | 'unavailable'} availabilityStatus 
- * @returns {Promise<Object>}
+ * @param {number} quantity 
+ * @param {'reserve' | 'release' | 'complete'} action 
  */
-const updateResourceAvailability = async (resourceId, availabilityStatus) => {
+const reserveOrReleaseQuantity = async (resourceId, quantity, action) => {
   const client = createClient();
-  const endpoint = `/api/resources/${resourceId}/availability`;
+  const endpoint = `/api/resources/${resourceId}/reserve`;
   const targetUrl = `${getBaseUrl()}${endpoint}`;
 
-  console.log(`[Exchange Service -> Resource Service] OUTBOUND REST PATCH: ${targetUrl} with status="${availabilityStatus}"`);
+  console.log(`[Exchange Service -> Resource Service] OUTBOUND REST PATCH: ${targetUrl} (action="${action}", qty=${quantity})`);
 
   try {
-    const response = await client.patch(endpoint, { availabilityStatus });
-    console.log(`[Exchange Service -> Resource Service] SUCCESS: Updated availability to "${availabilityStatus}"`);
+    const response = await client.patch(endpoint, { quantity, action });
+    console.log(`[Exchange Service -> Resource Service] SUCCESS: Executed "${action}" on resource ${resourceId}`);
     return response.data.data;
   } catch (error) {
     if (error.response) {
-      console.error(`[Exchange Service -> Resource Service] FAILED AVAILABILITY UPDATE (HTTP ${error.response.status}): ${JSON.stringify(error.response.data)}`);
-      const err = new Error(error.response.data.message || 'Failed to update resource availability');
+      console.error(`[Exchange Service -> Resource Service] FAILED QUANTITY RESERVATION (HTTP ${error.response.status}): ${JSON.stringify(error.response.data)}`);
+      const err = new Error(error.response.data.message || 'Quantity reservation failed on Resource Service');
       err.statusCode = error.response.status;
       throw err;
     } else {
-      console.error(`[Exchange Service -> Resource Service] NETWORK FAILURE on availability update:`, error.message);
-      const err = new Error('Failed to synchronize resource availability with Resource Service.');
+      const err = new Error('Network failure while coordinating quantity with Resource Service');
       err.statusCode = 503;
       throw err;
     }
   }
 };
 
+/**
+ * Query candidate resources from Resource Service for circular matching engine
+ */
+const getCandidateResources = async (category, unit, minQty) => {
+  const client = createClient();
+  const endpoint = `/api/resources/matches`;
+
+  console.log(`[Exchange Service -> Resource Service] OUTBOUND REST GET: ${getBaseUrl()}${endpoint}?category=${encodeURIComponent(category || '')}`);
+
+  try {
+    const response = await client.get(endpoint, {
+      params: { category, unit, minQty }
+    });
+    return response.data.data || [];
+  } catch (error) {
+    console.error('[Exchange Service -> Resource Service] Failed to retrieve matching candidates:', error.message);
+    return [];
+  }
+};
+
 module.exports = {
   getResourceDetails,
-  updateResourceAvailability
+  reserveOrReleaseQuantity,
+  getCandidateResources
 };

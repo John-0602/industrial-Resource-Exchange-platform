@@ -1,10 +1,10 @@
 @echo off
-title Resource Exchange Platform - Launcher
+title Industrial Resource Exchange Platform (IREP) - Launcher
 color 0A
 
 echo ======================================================================
-echo           RESOURCE EXCHANGE PLATFORM (COLLEGE LAB CAT 2)
-echo                  Full-Stack Microservices Launcher
+echo       INDUSTRIAL RESOURCE EXCHANGE PLATFORM (IREP) - B2B MARKETPLACE
+echo               Decoupled REST Microservices Launcher
 echo ======================================================================
 echo.
 
@@ -41,8 +41,11 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5002 ^| findstr LISTENING') 
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>nul
 
 echo.
-echo [3/4] Ensuring demo student accounts and sample resources are seeded...
+echo [3/4] Ensuring enterprise demonstration accounts and material listings are seeded...
 cd resource-service
+call npm run seed >nul 2>nul
+cd ..
+cd exchange-service
 call npm run seed >nul 2>nul
 cd ..
 
@@ -50,26 +53,26 @@ echo.
 echo [4/5] Launching Microservices in independent processes...
 echo.
 
-REM Start Microservice 1: Resource Service on Port 5001
-echo    - Starting Resource Service on http://localhost:5001 ...
+REM Start Microservice A: Resource Service on Port 5001
+echo    - Starting Resource Catalog Service on http://localhost:5001 ...
 start "Resource Service (:5001)" cmd /k "cd /d "%~dp0resource-service" && title Resource Service [Port 5001] && npm start"
 
 REM Brief pause to let Resource Service bind its port
 timeout /t 2 /nobreak >nul
 
-REM Start Microservice 2: Exchange Service on Port 5002
-echo    - Starting Exchange Service on http://localhost:5002 ...
+REM Start Microservice B: Exchange Service on Port 5002
+echo    - Starting Exchange & Matching Service on http://localhost:5002 ...
 start "Exchange Service (:5002)" cmd /k "cd /d "%~dp0exchange-service" && title Exchange Service [Port 5002] && npm start"
 
 REM Brief pause to let Exchange Service initialize
 timeout /t 2 /nobreak >nul
 
 REM Start Frontend: React Vite on Port 5173
-echo    - Starting React Frontend on http://localhost:5173 ...
+echo    - Starting React Industrial Dashboard on http://localhost:5173 ...
 start "Frontend Client (:5173)" cmd /k "cd /d "%~dp0frontend" && title Frontend React Client [Port 5173] && npm run dev"
 
 echo.
-echo [4/4] Opening Resource Exchange Platform in your default browser...
+echo [4/4] Opening Industrial Resource Exchange Platform in your default browser...
 timeout /t 3 /nobreak >nul
 start http://localhost:5173
 
@@ -80,10 +83,12 @@ echo   - Frontend:         http://localhost:5173
 echo   - Resource Service: http://localhost:5001
 echo   - Exchange Service: http://localhost:5002
 echo.
-echo   Demo Accounts for 1-Click Login (on /login screen):
-echo   - Priya Sharma (CS)  : priya.sharma@apex.edu  / Password@123
-echo   - Rahul Verma  (ECE) : rahul.verma@apex.edu   / Password@123
-echo   - Ananya Iyer  (Mech): ananya.iyer@apex.edu   / Password@123
+echo   Demo Corporate Accounts (with 1-Click login buttons on /login):
+echo   1. Apex Textiles       : karthik@apextextiles.com    / Password@123
+echo   2. Kalyani Forge       : rajesh@kalyaniforge.com     / Password@123
+echo   3. GreenLeaf Polymers  : sneha@greenleafpolymers.com / Password@123
+echo   4. Sahyadri Eco-Board  : mahesh@sahyadriboards.com   / Password@123
+echo   5. Platform Admin      : admin@irep.gov.in           / AdminPassword@123
 echo.
 echo   Keep the service windows open. Run 'stop.bat' or close the windows
 echo   when you wish to stop the application.

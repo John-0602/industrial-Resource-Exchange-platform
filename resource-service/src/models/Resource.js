@@ -6,92 +6,156 @@ const resourceSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide resource title'],
       trim: true,
-      maxlength: [150, 'Title cannot exceed 150 characters']
+      maxlength: [200, 'Title cannot exceed 200 characters']
     },
     description: {
       type: String,
-      required: [true, 'Please provide detailed resource description'],
+      required: [true, 'Please provide material description and origin process'],
       trim: true,
-      maxlength: [2000, 'Description cannot exceed 2000 characters']
+      maxlength: [3000, 'Description cannot exceed 3000 characters']
     },
-    category: {
+    materialCategory: {
       type: String,
-      required: [true, 'Please specify resource category'],
+      required: [true, 'Please specify industrial material category'],
       enum: {
         values: [
-          'Textbooks',
-          'Notes & Study Materials',
-          'Lab Equipment',
-          'Stationery',
-          'Calculators & Tools',
-          'Electronics & Hardware',
-          'Other'
+          'Textile and fabric waste',
+          'Metal scraps',
+          'Plastic waste and reusable polymers',
+          'Paper and cardboard',
+          'Wood scraps and sawdust',
+          'Agricultural by-products',
+          'Construction and demolition materials',
+          'Reusable industrial packaging',
+          'Surplus raw materials',
+          'Other recoverable industrial by-products'
         ],
-        message: '{VALUE} is not a valid category'
+        message: '{VALUE} is not a valid industrial category'
       }
     },
-    listingType: {
+    resourceType: {
       type: String,
-      required: [true, 'Please specify listing type'],
+      required: [true, 'Please specify resource type'],
       enum: {
-        values: ['Lend', 'Exchange', 'Donate', 'Give Away'],
-        message: '{VALUE} is not a valid listing type'
+        values: [
+          'By-product',
+          'Scrap',
+          'Surplus',
+          'Reusable Material',
+          'Recyclable Material'
+        ],
+        message: '{VALUE} is not a valid resource type'
       }
     },
     condition: {
       type: String,
-      required: [true, 'Please specify resource condition'],
-      enum: {
-        values: ['New', 'Like New', 'Good', 'Fair'],
-        message: '{VALUE} is not a valid condition'
-      }
+      required: [true, 'Please specify material condition or grade'],
+      trim: true
     },
-    owner: {
+    chemicalComposition: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    totalQuantity: {
+      type: Number,
+      required: [true, 'Please specify total quantity listed'],
+      min: [0.1, 'Quantity must be positive']
+    },
+    availableQuantity: {
+      type: Number,
+      required: true,
+      min: [0, 'Available quantity cannot be negative']
+    },
+    reservedQuantity: {
+      type: Number,
+      default: 0,
+      min: [0, 'Reserved quantity cannot be negative']
+    },
+    unit: {
+      type: String,
+      required: [true, 'Please specify measurement unit'],
+      enum: ['kg', 'tonnes', 'litres', 'units', 'bales', 'drums']
+    },
+    minOrderQuantity: {
+      type: Number,
+      default: 1,
+      min: [0.1, 'Minimum order quantity must be greater than 0']
+    },
+    indicativePrice: {
+      type: Number,
+      default: 0,
+      min: [0, 'Price cannot be negative']
+    },
+    currency: {
+      type: String,
+      default: 'INR'
+    },
+    intendedUse: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    handlingStorageInfo: {
+      type: String,
+      required: [true, 'Please specify handling, storage, and safety instructions'],
+      trim: true
+    },
+    complianceInfo: {
+      type: String,
+      default: 'Compliant with State Pollution Control Board guidelines',
+      trim: true
+    },
+    pickupLocation: {
+      facilityName: { type: String, default: '' },
+      address: { type: String, required: true },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      country: { type: String, default: 'India' },
+      pincode: { type: String, default: '' }
+    },
+    supplier: {
       id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: [true, 'Owner ID is required']
+        ref: 'Company',
+        required: [true, 'Supplier company ID is required']
       },
       name: {
         type: String,
-        required: [true, 'Owner name is required']
+        required: [true, 'Supplier company name is required']
+      },
+      registrationRef: {
+        type: String,
+        default: ''
       },
       email: {
         type: String,
-        required: [true, 'Owner email is required']
+        required: [true, 'Supplier contact email is required']
       },
-      collegeName: {
-        type: String,
-        default: 'Apex Engineering Institute'
-      },
-      department: {
-        type: String,
-        default: 'Computer Science and Engineering'
-      }
+      city: { type: String, default: '' },
+      state: { type: String, default: '' },
+      verificationStatus: { type: String, default: 'Pending' }
     },
     imageUrl: {
       type: String,
       default: ''
     },
-    exchangePreference: {
+    documentationUrl: {
       type: String,
-      trim: true,
       default: ''
-    },
-    lendingDuration: {
-      type: String,
-      trim: true,
-      default: ''
-    },
-    location: {
-      type: String,
-      required: [true, 'Please specify campus location or pickup point'],
-      trim: true
     },
     availabilityStatus: {
       type: String,
-      enum: ['available', 'reserved', 'exchanged', 'unavailable'],
+      enum: ['available', 'partially_reserved', 'reserved', 'transferred', 'withdrawn'],
       default: 'available'
+    },
+    moderationStatus: {
+      type: String,
+      enum: ['Approved', 'Under Review', 'Flagged', 'Rejected'],
+      default: 'Approved'
+    },
+    expiryDate: {
+      type: Date
     }
   },
   {
@@ -101,9 +165,11 @@ const resourceSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for high performance querying and searching
-resourceSchema.index({ title: 'text', description: 'text' });
-resourceSchema.index({ category: 1, listingType: 1, availabilityStatus: 1 });
-resourceSchema.index({ 'owner.id': 1 });
+// High-performance search and matching indexes
+resourceSchema.index({ title: 'text', description: 'text', chemicalComposition: 'text', intendedUse: 'text' });
+resourceSchema.index({ materialCategory: 1, resourceType: 1, availabilityStatus: 1 });
+resourceSchema.index({ 'supplier.id': 1 });
+resourceSchema.index({ 'pickupLocation.city': 1, 'pickupLocation.state': 1 });
+resourceSchema.index({ availableQuantity: 1, indicativePrice: 1 });
 
 module.exports = mongoose.model('Resource', resourceSchema);

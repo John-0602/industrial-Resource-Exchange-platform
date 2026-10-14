@@ -1,28 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { resourceApi } from '../api/client';
-import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Edit3, AlertCircle, ArrowLeft } from 'lucide-react';
+import { industrialCategories, resourceTypes, materialConditions } from '../components/FilterPanel';
+import { Factory, Scale, DollarSign, AlertCircle, Save, ArrowLeft } from 'lucide-react';
+
+const units = ['kg', 'tonnes', 'litres', 'units', 'meters', 'drums'];
 
 export const EditResourcePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { success, error } = useToast();
 
   const [formData, setFormData] = useState({
     title: '',
+    category: industrialCategories[1],
+    resourceType: 'By-product',
     description: '',
-    category: 'Textbooks',
-    listingType: 'Lend',
-    condition: 'Good',
+    totalQuantity: 1000,
+    availableQuantity: 1000,
+    unit: 'kg',
+    materialCondition: 'Production Scrap',
+    composition: '',
+    intendedUse: '',
+    pricePerUnit: 0,
+    currency: 'INR',
+    minOrderQuantity: 1,
+    facilityAddress: '',
+    city: '',
+    state: '',
+    country: 'India',
+    loadingEquipmentAvailable: true,
+    safetyHandling: '',
+    hazardousMaterial: false,
+    pcbCategory: '',
+    msdsUrl: '',
     imageUrl: '',
-    lendingDuration: '',
-    exchangePreference: '',
-    location: '',
     availabilityStatus: 'available'
   });
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -32,40 +48,51 @@ export const EditResourcePage = () => {
       try {
         const res = await resourceApi.get(`/api/resources/${id}`);
         if (res.data.success) {
-          const item = res.data.data;
-          // Verify owner
-          if (user && item.owner?.id !== user.id && item.owner?._id !== user.id) {
-            error('Unauthorized: You are not the owner of this listing');
-            navigate('/marketplace');
-            return;
-          }
-
+          const r = res.data.data;
           setFormData({
-            title: item.title,
-            description: item.description,
-            category: item.category,
-            listingType: item.listingType,
-            condition: item.condition,
-            imageUrl: item.imageUrl || '',
-            lendingDuration: item.lendingDuration || '',
-            exchangePreference: item.exchangePreference || '',
-            location: item.location || '',
-            availabilityStatus: item.availabilityStatus || 'available'
+            title: r.title || '',
+            category: r.category || industrialCategories[1],
+            resourceType: r.resourceType || 'By-product',
+            description: r.description || '',
+            totalQuantity: r.totalQuantity || r.availableQuantity || 0,
+            availableQuantity: r.availableQuantity || 0,
+            unit: r.unit || 'kg',
+            materialCondition: r.materialCondition || 'Production Scrap',
+            composition: r.composition || '',
+            intendedUse: r.intendedUse || '',
+            pricePerUnit: r.pricePerUnit || 0,
+            currency: r.currency || 'INR',
+            minOrderQuantity: r.minOrderQuantity || 1,
+            facilityAddress: r.pickupLocation?.address || '',
+            city: r.pickupLocation?.city || '',
+            state: r.pickupLocation?.state || '',
+            country: r.pickupLocation?.country || 'India',
+            loadingEquipmentAvailable: Boolean(r.pickupLocation?.loadingEquipmentAvailable),
+            safetyHandling: r.safetyHandling || '',
+            hazardousMaterial: Boolean(r.compliance?.hazardousMaterial),
+            pcbCategory: r.compliance?.pcbCategory || '',
+            msdsUrl: r.compliance?.msdsUrl || '',
+            imageUrl: r.imageUrl || '',
+            availabilityStatus: r.availabilityStatus || 'available'
           });
         }
       } catch (err) {
         error('Failed to load resource for editing');
-        navigate('/marketplace');
+        navigate('/my-listings');
       } finally {
         setLoading(false);
       }
     };
 
     fetchResource();
-  }, [id, user, navigate, error]);
+  }, [id, navigate, error]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -74,13 +101,45 @@ export const EditResourcePage = () => {
     setSubmitting(true);
 
     try {
-      const res = await resourceApi.put(`/api/resources/${id}`, formData);
+      const payload = {
+        title: formData.title.trim(),
+        category: formData.category,
+        resourceType: formData.resourceType,
+        description: formData.description.trim(),
+        totalQuantity: Number(formData.totalQuantity),
+        availableQuantity: Number(formData.availableQuantity),
+        unit: formData.unit,
+        materialCondition: formData.materialCondition,
+        composition: formData.composition.trim(),
+        intendedUse: formData.intendedUse.trim(),
+        pricePerUnit: Number(formData.pricePerUnit) || 0,
+        currency: formData.currency,
+        minOrderQuantity: Number(formData.minOrderQuantity) || 1,
+        pickupLocation: {
+          address: formData.facilityAddress.trim(),
+          city: formData.city.trim(),
+          state: formData.state.trim(),
+          country: formData.country.trim(),
+          loadingEquipmentAvailable: Boolean(formData.loadingEquipmentAvailable)
+        },
+        safetyHandling: formData.safetyHandling.trim(),
+        compliance: {
+          hazardousMaterial: Boolean(formData.hazardousMaterial),
+          pcbCategory: formData.pcbCategory.trim(),
+          msdsUrl: formData.msdsUrl.trim()
+        },
+        imageUrl: formData.imageUrl.trim(),
+        availabilityStatus: formData.availabilityStatus
+      };
+
+      const res = await resourceApi.put(`/api/resources/${id}`, payload);
+
       if (res.data.success) {
-        success('Resource updated successfully');
+        success('Industrial listing updated successfully');
         navigate(`/resources/${id}`);
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to update resource';
+      const msg = err.response?.data?.message || err.message || 'Failed to update material';
       setFormError(msg);
       error(msg);
     } finally {
@@ -90,44 +149,49 @@ export const EditResourcePage = () => {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto py-12 flex flex-col items-center justify-center">
+      <div className="max-w-4xl mx-auto py-16 flex flex-col items-center justify-center">
         <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-slate-500 mt-3 font-medium">Loading resource details...</p>
+        <p className="text-xs text-slate-500 mt-3 font-semibold">Loading listing editor...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-        <div className="pb-6 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-teal-50 text-teal-800 text-xs font-semibold mb-2">
-              <Edit3 className="w-3.5 h-3.5 text-teal-600" />
-              <span>Edit Listing</span>
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900">Update Resource</h1>
+    <div className="max-w-4xl mx-auto space-y-6 pb-16">
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-navy-950 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>Back to Material</span>
+      </button>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-navy-900 text-teal-400 flex items-center justify-center shadow-xs">
+            <Factory className="w-5 h-5" />
           </div>
-          <button
-            onClick={() => navigate(`/resources/${id}`)}
-            className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Cancel</span>
-          </button>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">Edit Material Listing</h1>
+            <p className="text-xs text-slate-500">
+              Update inventory quantities, indicative rates, or technical specifications
+            </p>
+          </div>
         </div>
+      </div>
 
-        {formError && (
-          <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{formError}</span>
-          </div>
-        )}
+      {formError && (
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{formError}</span>
+        </div>
+      )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-          <div>
+      <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Resource Title *
+              Material Title *
             </label>
             <input
               type="text"
@@ -135,146 +199,151 @@ export const EditResourcePage = () => {
               required
               value={formData.title}
               onChange={handleChange}
-              className="w-full text-sm p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
+              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
             />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Category *
-              </label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full text-sm p-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
-              >
-                <option value="Textbooks">Textbooks</option>
-                <option value="Notes & Study Materials">Notes & Study Materials</option>
-                <option value="Lab Equipment">Lab Equipment</option>
-                <option value="Stationery">Stationery</option>
-                <option value="Calculators & Tools">Calculators & Tools</option>
-                <option value="Electronics & Hardware">Electronics & Hardware</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Listing Type *
-              </label>
-              <select
-                name="listingType"
-                value={formData.listingType}
-                onChange={handleChange}
-                className="w-full text-sm p-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
-              >
-                <option value="Lend">Lend</option>
-                <option value="Exchange">Exchange</option>
-                <option value="Donate">Donate</option>
-                <option value="Give Away">Give Away</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Condition *
-              </label>
-              <select
-                name="condition"
-                value={formData.condition}
-                onChange={handleChange}
-                className="w-full text-sm p-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
-              >
-                <option value="New">New</option>
-                <option value="Like New">Like New</option>
-                <option value="Good">Good</option>
-                <option value="Fair">Fair</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Availability Status
-              </label>
-              <select
-                name="availabilityStatus"
-                value={formData.availabilityStatus}
-                onChange={handleChange}
-                className="w-full text-sm p-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800 font-semibold"
-              >
-                <option value="available">Available</option>
-                <option value="reserved">Reserved</option>
-                <option value="exchanged">Exchanged / Completed</option>
-                <option value="unavailable">Unavailable</option>
-              </select>
-            </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Campus Pickup Location *
+              Category
+            </label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
+            >
+              {industrialCategories.filter((c) => c !== 'All').map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              Resource Type
+            </label>
+            <select
+              name="resourceType"
+              value={formData.resourceType}
+              onChange={handleChange}
+              className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
+            >
+              {resourceTypes.filter((t) => t !== 'All').map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            Description
+          </label>
+          <textarea
+            name="description"
+            rows={3}
+            required
+            value={formData.description}
+            onChange={handleChange}
+            className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
+          />
+        </div>
+
+        {/* Quantities & Pricing */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <Scale className="w-3.5 h-3.5 text-teal-600" />
+              Available Stock ({formData.unit})
             </label>
             <input
-              type="text"
-              name="location"
+              type="number"
+              name="availableQuantity"
+              min="0"
+              step="any"
               required
-              value={formData.location}
+              value={formData.availableQuantity}
               onChange={handleChange}
-              className="w-full text-sm p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
+              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Description *
+              Measurement Unit
             </label>
-            <textarea
-              name="description"
-              required
-              rows={4}
-              value={formData.description}
+            <select
+              name="unit"
+              value={formData.unit}
               onChange={handleChange}
-              className="w-full text-sm p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 resize-none text-slate-800"
-            />
+              className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
+            >
+              {units.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Photo URL
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+              Rate per Unit ({formData.currency})
             </label>
             <input
-              type="url"
-              name="imageUrl"
-              value={formData.imageUrl}
+              type="number"
+              name="pricePerUnit"
+              min="0"
+              step="any"
+              value={formData.pricePerUnit}
               onChange={handleChange}
-              className="w-full text-sm p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
+              className="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => navigate(`/resources/${id}`)}
-              disabled={submitting}
-              className="px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              Inventory Status
+            </label>
+            <select
+              name="availabilityStatus"
+              value={formData.availabilityStatus}
+              onChange={handleChange}
+              className="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 text-slate-800"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-navy-900 text-white rounded-lg text-sm font-bold hover:bg-navy-950 transition-colors shadow-sm disabled:opacity-50"
-            >
-              <Edit3 className="w-4 h-4" />
-              <span>{submitting ? 'Saving Changes...' : 'Save Changes'}</span>
-            </button>
+              <option value="available">Fully Available</option>
+              <option value="partially_reserved">Partially Reserved</option>
+              <option value="reserved">Fully Reserved</option>
+              <option value="transferred">Transferred / Closed</option>
+              <option value="withdrawn">Withdrawn</option>
+            </select>
           </div>
-        </form>
-      </div>
+        </div>
+
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-navy-900 text-white rounded-lg text-xs font-semibold hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            <span>{submitting ? 'Saving...' : 'Save Updates'}</span>
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

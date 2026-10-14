@@ -1,52 +1,90 @@
 const Resource = require('../models/Resource');
 
-// @desc    Create a new resource listing
+// @desc    Publish a new industrial resource listing
 // @route   POST /api/resources
-// @access  Private (Student)
+// @access  Private (Supplier Company)
 const createResource = async (req, res, next) => {
   try {
     const {
       title,
       description,
-      category,
-      listingType,
+      materialCategory,
+      resourceType,
       condition,
+      chemicalComposition,
+      totalQuantity,
+      unit,
+      minOrderQuantity,
+      indicativePrice,
+      currency,
+      intendedUse,
+      handlingStorageInfo,
+      complianceInfo,
+      pickupLocation,
       imageUrl,
-      exchangePreference,
-      lendingDuration,
-      location
+      documentationUrl,
+      expiryDate
     } = req.body;
 
-    if (!title || !description || !category || !listingType || !condition || !location) {
+    if (!title || !description || !materialCategory || !resourceType || !condition || !totalQuantity || !unit || !handlingStorageInfo || !pickupLocation?.city) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide title, description, category, listing type, condition, and location'
+        message: 'Please provide title, description, category, resource type, condition, quantity, unit, handling info, and pickup location'
+      });
+    }
+
+    const qty = Number(totalQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Total quantity must be a positive number'
       });
     }
 
     const resource = await Resource.create({
       title: title.trim(),
       description: description.trim(),
-      category,
-      listingType,
-      condition,
-      imageUrl: imageUrl || '',
-      exchangePreference: exchangePreference ? exchangePreference.trim() : '',
-      lendingDuration: lendingDuration ? lendingDuration.trim() : '',
-      location: location.trim(),
-      owner: {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        collegeName: req.user.collegeName,
-        department: req.user.department
+      materialCategory,
+      resourceType,
+      condition: condition.trim(),
+      chemicalComposition: chemicalComposition ? chemicalComposition.trim() : '',
+      totalQuantity: qty,
+      availableQuantity: qty,
+      reservedQuantity: 0,
+      unit,
+      minOrderQuantity: minOrderQuantity ? Number(minOrderQuantity) : 1,
+      indicativePrice: indicativePrice !== undefined ? Number(indicativePrice) : 0,
+      currency: currency || 'INR',
+      intendedUse: intendedUse ? intendedUse.trim() : '',
+      handlingStorageInfo: handlingStorageInfo.trim(),
+      complianceInfo: complianceInfo ? complianceInfo.trim() : 'Compliant with industrial waste regulations',
+      pickupLocation: {
+        facilityName: pickupLocation.facilityName || req.company.name,
+        address: pickupLocation.address || req.company.address,
+        city: pickupLocation.city.trim(),
+        state: pickupLocation.state.trim(),
+        country: pickupLocation.country || 'India',
+        pincode: pickupLocation.pincode || ''
       },
-      availabilityStatus: 'available'
+      supplier: {
+        id: req.company._id,
+        name: req.company.name,
+        registrationRef: req.company.registrationRef || '',
+        email: req.company.email,
+        city: req.company.city,
+        state: req.company.state,
+        verificationStatus: req.company.verificationStatus || 'Pending'
+      },
+      imageUrl: imageUrl || '',
+      documentationUrl: documentationUrl || '',
+      expiryDate: expiryDate ? new Date(expiryDate) : null,
+      availabilityStatus: 'available',
+      moderationStatus: 'Approved'
     });
 
     res.status(201).json({
       success: true,
-      message: 'Resource listed successfully',
+      message: 'Industrial resource published successfully on the exchange catalog',
       data: resource
     });
   } catch (error) {
@@ -63,14 +101,14 @@ const getResources = async (req, res, next) => {
     const limit = parseInt(req.query.limit, 10) || 12;
     const skip = (page - 1) * limit;
 
-    const query = {};
+    const query = { moderationStatus: { $ne: 'Rejected' } };
 
     if (req.query.category && req.query.category !== 'All') {
-      query.category = req.query.category;
+      query.materialCategory = req.query.category;
     }
 
-    if (req.query.listingType && req.query.listingType !== 'All') {
-      query.listingType = req.query.listingType;
+    if (req.query.resourceType && req.query.resourceType !== 'All') {
+      query.resourceType = req.query.resourceType;
     }
 
     if (req.query.condition && req.query.condition !== 'All') {
@@ -79,18 +117,40 @@ const getResources = async (req, res, next) => {
 
     if (req.query.availability && req.query.availability !== 'All') {
       query.availabilityStatus = req.query.availability;
+    } else if (!req.query.allStatuses) {
+      // Default to active available resources
+      query.availabilityStatus = { $in: ['available', 'partially_reserved'] };
     }
 
-    if (req.query.ownerId) {
-      query['owner.id'] = req.query.ownerId;
+    if (req.query.supplierId) {
+      query['supplier.id'] = req.query.supplierId;
     }
 
-    // Sort order
+    if (req.query.city) {
+      query['pickupLocation.city'] = { $regex: req.query.city, $options: 'i' };
+    }
+
+    if (req.query.state) {
+      query['pickupLocation.state'] = { $regex: req.query.state, $options: 'i' };
+    }
+
+    if (req.query.minQty) {
+      query.availableQuantity = { $gte: Number(req.query.minQty) };
+    }
+
+    if (req.query.maxPrice) {
+      query.indicativePrice = { $lte: Number(req.query.maxPrice) };
+    }
+
     let sort = { createdAt: -1 };
     if (req.query.sort === 'oldest') {
       sort = { createdAt: 1 };
-    } else if (req.query.sort === 'title_asc') {
-      sort = { title: 1 };
+    } else if (req.query.sort === 'price_asc') {
+      sort = { indicativePrice: 1 };
+    } else if (req.query.sort === 'price_desc') {
+      sort = { indicativePrice: -1 };
+    } else if (req.query.sort === 'qty_desc') {
+      sort = { availableQuantity: -1 };
     }
 
     const total = await Resource.countDocuments(query);
@@ -112,31 +172,31 @@ const getResources = async (req, res, next) => {
   }
 };
 
-// @desc    Search resources by keyword
+// @desc    Search industrial resources by keyword
 // @route   GET /api/resources/search
 // @access  Public
 const searchResources = async (req, res, next) => {
   try {
     const keyword = (req.query.q || req.query.query || '').trim();
-    const category = req.query.category;
-    const listingType = req.query.listingType;
-
-    const query = {};
+    const query = { moderationStatus: { $ne: 'Rejected' } };
 
     if (keyword) {
       query.$or = [
         { title: { $regex: keyword, $options: 'i' } },
         { description: { $regex: keyword, $options: 'i' } },
-        { location: { $regex: keyword, $options: 'i' } }
+        { chemicalComposition: { $regex: keyword, $options: 'i' } },
+        { intendedUse: { $regex: keyword, $options: 'i' } },
+        { 'pickupLocation.city': { $regex: keyword, $options: 'i' } },
+        { 'pickupLocation.state': { $regex: keyword, $options: 'i' } }
       ];
     }
 
-    if (category && category !== 'All') {
-      query.category = category;
+    if (req.query.category && req.query.category !== 'All') {
+      query.materialCategory = req.query.category;
     }
 
-    if (listingType && listingType !== 'All') {
-      query.listingType = listingType;
+    if (req.query.resourceType && req.query.resourceType !== 'All') {
+      query.resourceType = req.query.resourceType;
     }
 
     const resources = await Resource.find(query).sort({ createdAt: -1 }).limit(30);
@@ -161,7 +221,7 @@ const getResourceById = async (req, res, next) => {
     if (!resource) {
       return res.status(404).json({
         success: false,
-        message: 'Resource not found with the specified ID'
+        message: 'Industrial resource not found with the specified ID'
       });
     }
 
@@ -174,9 +234,9 @@ const getResourceById = async (req, res, next) => {
   }
 };
 
-// @desc    Update resource listing (Owner only)
+// @desc    Update resource listing (Supplier only)
 // @route   PUT /api/resources/:id
-// @access  Private
+// @access  Private (Supplier)
 const updateResource = async (req, res, next) => {
   try {
     const resource = await Resource.findById(req.params.id);
@@ -188,53 +248,53 @@ const updateResource = async (req, res, next) => {
       });
     }
 
-    // Check ownership
-    if (resource.owner.id.toString() !== req.user._id.toString()) {
+    if (resource.supplier.id.toString() !== req.company._id.toString() && req.company.role !== 'admin') {
       return res.status(403).json({
         success: false,
-        message: 'Unauthorized: You are not the owner of this resource listing'
+        message: 'Unauthorized: You are not authorized to edit this resource listing'
       });
     }
 
-    const {
-      title,
-      description,
-      category,
-      listingType,
-      condition,
-      imageUrl,
-      exchangePreference,
-      lendingDuration,
-      location,
-      availabilityStatus
-    } = req.body;
+    const allowed = [
+      'title', 'description', 'materialCategory', 'resourceType',
+      'condition', 'chemicalComposition', 'minOrderQuantity',
+      'indicativePrice', 'currency', 'intendedUse', 'handlingStorageInfo',
+      'complianceInfo', 'imageUrl', 'documentationUrl', 'availabilityStatus'
+    ];
 
-    if (title) resource.title = title.trim();
-    if (description) resource.description = description.trim();
-    if (category) resource.category = category;
-    if (listingType) resource.listingType = listingType;
-    if (condition) resource.condition = condition;
-    if (imageUrl !== undefined) resource.imageUrl = imageUrl;
-    if (exchangePreference !== undefined) resource.exchangePreference = exchangePreference.trim();
-    if (lendingDuration !== undefined) resource.lendingDuration = lendingDuration.trim();
-    if (location) resource.location = location.trim();
-    if (availabilityStatus) resource.availabilityStatus = availabilityStatus;
+    allowed.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        resource[field] = req.body[field];
+      }
+    });
 
-    const updatedResource = await resource.save();
+    if (req.body.pickupLocation) {
+      resource.pickupLocation = { ...resource.pickupLocation, ...req.body.pickupLocation };
+    }
+
+    if (req.body.totalQuantity !== undefined) {
+      const newTotal = Number(req.body.totalQuantity);
+      if (newTotal >= resource.reservedQuantity) {
+        resource.totalQuantity = newTotal;
+        resource.availableQuantity = newTotal - resource.reservedQuantity;
+      }
+    }
+
+    const updated = await resource.save();
 
     res.json({
       success: true,
-      message: 'Resource updated successfully',
-      data: updatedResource
+      message: 'Resource specifications updated successfully',
+      data: updated
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Delete resource listing (Owner only)
+// @desc    Delete resource listing (Supplier only)
 // @route   DELETE /api/resources/:id
-// @access  Private
+// @access  Private (Supplier)
 const deleteResource = async (req, res, next) => {
   try {
     const resource = await Resource.findById(req.params.id);
@@ -246,11 +306,17 @@ const deleteResource = async (req, res, next) => {
       });
     }
 
-    // Check ownership
-    if (resource.owner.id.toString() !== req.user._id.toString()) {
+    if (resource.supplier.id.toString() !== req.company._id.toString() && req.company.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized: You are not authorized to delete this resource listing'
+      });
+    }
+
+    if (resource.reservedQuantity > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete listing: ${resource.reservedQuantity} ${resource.unit} is currently held in active exchange negotiations`
       });
     }
 
@@ -258,7 +324,7 @@ const deleteResource = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Resource listing removed successfully',
+      message: 'Resource listing removed from platform inventory',
       data: { id: req.params.id }
     });
   } catch (error) {
@@ -266,53 +332,128 @@ const deleteResource = async (req, res, next) => {
   }
 };
 
-// @desc    Update resource availability (Owner or Exchange Microservice)
+// @desc    Update resource availability directly
 // @route   PATCH /api/resources/:id/availability
-// @access  Private (Owner or Verified Service)
+// @access  Private (Supplier or Service)
 const updateAvailability = async (req, res, next) => {
   try {
     const { availabilityStatus } = req.body;
+    const resource = await Resource.findById(req.params.id);
 
-    const validStatuses = ['available', 'reserved', 'exchanged', 'unavailable'];
-    if (!validStatuses.includes(availabilityStatus)) {
+    if (!resource) {
+      return res.status(404).json({ success: false, message: 'Resource not found' });
+    }
+
+    resource.availabilityStatus = availabilityStatus;
+    await resource.save();
+
+    res.json({
+      success: true,
+      message: `Resource availability status updated to "${availabilityStatus}"`,
+      data: resource
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reserve, release, or complete quantity allocation (Inter-Service REST API)
+// @route   PATCH /api/resources/:id/reserve
+// @access  Verified Microservice OR Supplier
+const reserveOrReleaseQuantity = async (req, res, next) => {
+  try {
+    const { quantity, action } = req.body;
+    const qty = Number(quantity);
+
+    if (!qty || qty <= 0 || !['reserve', 'release', 'complete'].includes(action)) {
       return res.status(400).json({
         success: false,
-        message: `Invalid availabilityStatus. Allowed values: ${validStatuses.join(', ')}`
+        message: 'Valid positive quantity and action ("reserve", "release", "complete") are required'
       });
     }
 
     const resource = await Resource.findById(req.params.id);
-
     if (!resource) {
-      return res.status(404).json({
-        success: false,
-        message: 'Resource not found'
-      });
+      return res.status(404).json({ success: false, message: 'Resource not found' });
     }
 
-    // If caller is a user (not internal service call), verify ownership
-    if (!req.isServiceCall && req.user) {
-      if (resource.owner.id.toString() !== req.user._id.toString()) {
-        return res.status(403).json({
+    if (action === 'reserve') {
+      if (resource.availableQuantity < qty) {
+        return res.status(409).json({
           success: false,
-          message: 'Unauthorized: Only the resource owner or authorized microservice can update availability'
+          message: `Insufficient material quantity: Requested ${qty} ${resource.unit}, but only ${resource.availableQuantity} ${resource.unit} is available`
         });
       }
+
+      resource.availableQuantity -= qty;
+      resource.reservedQuantity += qty;
+
+      if (resource.availableQuantity <= 0) {
+        resource.availabilityStatus = 'reserved';
+      } else {
+        resource.availabilityStatus = 'partially_reserved';
+      }
+
+      console.log(`[Resource Service] Reserved ${qty} ${resource.unit} for resource "${resource.title}". Remaining available: ${resource.availableQuantity} ${resource.unit}`);
+    } else if (action === 'release') {
+      resource.availableQuantity += qty;
+      resource.reservedQuantity = Math.max(0, resource.reservedQuantity - qty);
+
+      if (resource.availableQuantity >= resource.totalQuantity) {
+        resource.availabilityStatus = 'available';
+      } else {
+        resource.availabilityStatus = 'partially_reserved';
+      }
+
+      console.log(`[Resource Service] Released ${qty} ${resource.unit} back to inventory for resource "${resource.title}". Available: ${resource.availableQuantity} ${resource.unit}`);
+    } else if (action === 'complete') {
+      resource.reservedQuantity = Math.max(0, resource.reservedQuantity - qty);
+      resource.totalQuantity = Math.max(0, resource.totalQuantity - qty);
+
+      if (resource.availableQuantity <= 0 && resource.reservedQuantity <= 0) {
+        resource.availabilityStatus = 'transferred';
+      }
+
+      console.log(`[Resource Service] Completed transfer of ${qty} ${resource.unit} for resource "${resource.title}". Remaining total: ${resource.totalQuantity}`);
     }
 
-    resource.availabilityStatus = availabilityStatus;
     const updated = await resource.save();
-
-    console.log(
-      `[Resource Service] Availability for resource ${resource._id} ("${resource.title}") updated to: ${availabilityStatus} (Triggered by: ${
-        req.isServiceCall ? 'Exchange Microservice' : `Owner (${req.user?.name})`
-      })`
-    );
 
     res.json({
       success: true,
-      message: `Resource availability successfully updated to ${availabilityStatus}`,
+      message: `Successfully executed "${action}" for ${qty} ${resource.unit}`,
       data: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get candidate resources for automated matching engine
+// @route   GET /api/resources/matches
+// @access  Public / Internal
+const getMatchingCandidates = async (req, res, next) => {
+  try {
+    const { category, unit, minQty } = req.query;
+    const query = {
+      availabilityStatus: { $in: ['available', 'partially_reserved'] },
+      moderationStatus: { $ne: 'Rejected' }
+    };
+
+    if (category) {
+      query.materialCategory = category;
+    }
+
+    if (minQty) {
+      query.availableQuantity = { $gte: Number(minQty) };
+    }
+
+    const candidates = await Resource.find(query).limit(50);
+
+    res.json({
+      success: true,
+      count: candidates.length,
+      data: candidates
     });
   } catch (error) {
     next(error);
@@ -326,5 +467,7 @@ module.exports = {
   getResourceById,
   updateResource,
   deleteResource,
-  updateAvailability
+  updateAvailability,
+  reserveOrReleaseQuantity,
+  getMatchingCandidates
 };

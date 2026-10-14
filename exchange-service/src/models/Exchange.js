@@ -12,75 +12,82 @@ const exchangeSchema = new mongoose.Schema(
       required: [true, 'Resource title is required'],
       trim: true
     },
-    resourceCategory: {
+    materialCategory: {
       type: String,
-      default: 'General'
+      required: true
     },
-    resourceImageUrl: {
+    supplierCompanyId: {
       type: String,
-      default: ''
-    },
-    requesterId: {
-      type: String,
-      required: [true, 'Requester ID is required'],
+      required: [true, 'Supplier Company ID is required'],
       index: true
     },
-    requesterName: {
+    supplierCompanyName: {
       type: String,
-      required: [true, 'Requester name is required']
+      required: true
     },
-    requesterEmail: {
+    supplierEmail: {
       type: String,
-      required: [true, 'Requester email is required']
+      required: true
     },
-    requesterCollege: {
+    receiverCompanyId: {
       type: String,
-      default: 'Apex Engineering Institute'
-    },
-    requesterDepartment: {
-      type: String,
-      default: 'Computer Science and Engineering'
-    },
-    ownerId: {
-      type: String,
-      required: [true, 'Resource owner ID is required'],
+      required: [true, 'Receiver Company ID is required'],
       index: true
     },
-    ownerName: {
+    receiverCompanyName: {
       type: String,
-      required: [true, 'Owner name is required']
+      required: true
     },
-    ownerEmail: {
+    receiverEmail: {
       type: String,
-      required: [true, 'Owner email is required']
+      required: true
     },
-    requestMessage: {
-      type: String,
-      required: [true, 'Please provide a clear request message explaining your requirement'],
-      trim: true,
-      maxlength: [1000, 'Message cannot exceed 1000 characters']
+    requestedQuantity: {
+      type: Number,
+      required: [true, 'Requested quantity is required'],
+      min: [0.1, 'Quantity must be positive']
     },
-    requestType: {
+    unit: {
       type: String,
-      required: [true, 'Request type is required'],
-      enum: {
-        values: ['Lend', 'Exchange', 'Donate', 'Give Away'],
-        message: '{VALUE} is not a valid request type'
-      }
+      required: true
     },
-    exchangeItemOffered: {
-      type: String,
-      trim: true,
-      default: ''
+    proposedPricePerUnit: {
+      type: Number,
+      default: 0
     },
-    durationRequested: {
+    currency: {
       type: String,
-      trim: true,
-      default: ''
+      default: 'INR'
+    },
+    totalProposedAmount: {
+      type: Number,
+      default: 0
+    },
+    proposalMessage: {
+      type: String,
+      required: [true, 'Please provide proposal details or processing requirements'],
+      trim: true
+    },
+    deliveryTerms: {
+      type: String,
+      default: 'Ex-Works pickup arranged by receiver facility',
+      trim: true
+    },
+    complianceAck: {
+      type: Boolean,
+      default: true
     },
     status: {
       type: String,
-      enum: ['Pending', 'Approved', 'Rejected', 'Cancelled', 'Completed'],
+      enum: [
+        'Pending',
+        'Under Negotiation',
+        'Accepted',
+        'Rejected',
+        'Cancelled',
+        'In Transfer',
+        'Completed'
+      ],
       default: 'Pending',
       index: true
     },
@@ -91,7 +98,24 @@ const exchangeSchema = new mongoose.Schema(
         changedBy: { type: String, default: 'System' },
         note: { type: String, default: '' }
       }
-    ]
+    ],
+    negotiationNotes: [
+      {
+        senderId: { type: String, required: true },
+        senderName: { type: String, required: true },
+        message: { type: String, required: true },
+        proposedPrice: { type: Number },
+        timestamp: { type: Date, default: Date.now }
+      }
+    ],
+    transferTracking: {
+      trackingRef: { type: String, default: '' },
+      carrierName: { type: String, default: '' },
+      dispatchDate: { type: Date },
+      expectedDeliveryDate: { type: Date },
+      actualDeliveryDate: { type: Date },
+      transferNotes: { type: String, default: '' }
+    }
   },
   {
     timestamps: true,
@@ -100,9 +124,8 @@ const exchangeSchema = new mongoose.Schema(
   }
 );
 
-// Compound indexes for fast sent/received queries
-exchangeSchema.index({ requesterId: 1, status: 1 });
-exchangeSchema.index({ ownerId: 1, status: 1 });
-exchangeSchema.index({ resourceId: 1, requesterId: 1, status: 1 });
+exchangeSchema.index({ receiverCompanyId: 1, status: 1 });
+exchangeSchema.index({ supplierCompanyId: 1, status: 1 });
+exchangeSchema.index({ resourceId: 1, receiverCompanyId: 1 });
 
 module.exports = mongoose.model('Exchange', exchangeSchema);

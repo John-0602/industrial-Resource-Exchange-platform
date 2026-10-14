@@ -1,20 +1,22 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { resourceApi } from '../api/client';
 import { ResourceCard } from '../components/ResourceCard';
+import { MaterialTable } from '../components/MaterialTable';
 import { SearchBar } from '../components/SearchBar';
 import { FilterPanel } from '../components/FilterPanel';
 import { CardGridSkeleton } from '../components/LoadingSkeleton';
 import { EmptyState } from '../components/EmptyState';
-import { SlidersHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { SlidersHorizontal, ChevronLeft, ChevronRight, LayoutGrid, ListFilter } from 'lucide-react';
 
 const initialFilters = {
   category: 'All',
-  listingType: 'All',
+  resourceType: 'All',
   availability: 'All',
   condition: 'All',
+  location: '',
   sort: 'newest',
   page: 1,
-  limit: 9
+  limit: 12
 };
 
 export const MarketplacePage = () => {
@@ -22,6 +24,7 @@ export const MarketplacePage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState(initialFilters);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [pagination, setPagination] = useState({
     page: 1,
     totalPages: 1,
@@ -45,9 +48,10 @@ export const MarketplacePage = () => {
       }
 
       if (filters.category !== 'All') params.append('category', filters.category);
-      if (filters.listingType !== 'All') params.append('listingType', filters.listingType);
+      if (filters.resourceType !== 'All') params.append('resourceType', filters.resourceType);
       if (filters.availability !== 'All') params.append('availability', filters.availability);
       if (filters.condition !== 'All') params.append('condition', filters.condition);
+      if (filters.location?.trim()) params.append('location', filters.location.trim());
 
       const queryString = params.toString();
       const url = queryString ? `${endpoint}?${queryString}` : endpoint;
@@ -65,7 +69,7 @@ export const MarketplacePage = () => {
         }
       }
     } catch (err) {
-      console.error('Failed to load marketplace resources:', err);
+      console.error('Failed to load industrial marketplace catalog:', err);
     } finally {
       setLoading(false);
     }
@@ -88,14 +92,16 @@ export const MarketplacePage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       {/* Page Title & Search Header */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Campus Resource Marketplace</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+              Industrial Material & By-Product Marketplace
+            </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Browse textbooks, lab tools, handwritten notes, and supplies available from students
+              Discover verified industrial surplus, manufacturing scraps, and recyclable feedstocks
             </p>
           </div>
 
@@ -106,8 +112,29 @@ export const MarketplacePage = () => {
                 setSearchQuery(val);
                 setFilters((prev) => ({ ...prev, page: 1 }));
               }}
-              placeholder="Search by book, author, course code..."
+              placeholder="Search by material, grade, chemical spec..."
             />
+            
+            {/* View Mode Switcher */}
+            <div className="hidden sm:flex items-center border border-slate-200 rounded-lg p-1 bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-white shadow-xs text-navy-900' : 'text-slate-400 hover:text-slate-700'}`}
+                title="Grid Cards"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded ${viewMode === 'table' ? 'bg-white shadow-xs text-navy-900' : 'text-slate-400 hover:text-slate-700'}`}
+                title="Registry Table"
+              >
+                <ListFilter className="w-4 h-4" />
+              </button>
+            </div>
+
             <button
               onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
               className="lg:hidden p-2.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50"
@@ -141,17 +168,17 @@ export const MarketplacePage = () => {
           </div>
         )}
 
-        {/* Cards Catalog */}
+        {/* Catalog Content */}
         <div className="lg:col-span-3 space-y-6">
           <div className="flex items-center justify-between text-xs text-slate-500 px-1">
             <span>
-              Showing <span className="font-semibold text-slate-800">{resources.length}</span> {resources.length === 1 ? 'item' : 'items'}
+              Showing <span className="font-semibold text-slate-900">{resources.length}</span> {resources.length === 1 ? 'material' : 'materials'}
               {pagination.total > 0 && ` of ${pagination.total}`}
             </span>
-            {(filters.category !== 'All' || filters.listingType !== 'All' || searchQuery) && (
+            {(filters.category !== 'All' || filters.resourceType !== 'All' || filters.condition !== 'All' || searchQuery) && (
               <button
                 onClick={handleResetFilters}
-                className="text-teal-700 hover:underline font-medium"
+                className="text-teal-700 hover:underline font-semibold"
               >
                 Clear all filters
               </button>
@@ -161,16 +188,20 @@ export const MarketplacePage = () => {
           {loading ? (
             <CardGridSkeleton count={6} />
           ) : resources.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {resources.map((resource) => (
-                <ResourceCard key={resource._id || resource.id} resource={resource} />
-              ))}
-            </div>
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {resources.map((resource) => (
+                  <ResourceCard key={resource._id || resource.id} resource={resource} />
+                ))}
+              </div>
+            ) : (
+              <MaterialTable resources={resources} />
+            )
           ) : (
             <EmptyState
-              title="No resources match your search"
-              description="We couldn't find any resources matching your current category or search query. Try broadening your terms or clear filters."
-              actionLabel="Reset All Filters"
+              title="No industrial materials match your search"
+              description="We could not find any active listings matching your category, grade, or location parameters. Try broadening your criteria or reset filters."
+              actionLabel="Reset Industrial Filters"
               onAction={handleResetFilters}
             />
           )}
@@ -186,7 +217,7 @@ export const MarketplacePage = () => {
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              <span className="text-xs font-medium text-slate-700 px-3 py-2 bg-white border border-slate-200 rounded-lg">
+              <span className="text-xs font-semibold text-slate-700 px-3 py-2 bg-white border border-slate-200 rounded-lg">
                 Page {pagination.page} of {pagination.totalPages}
               </span>
 

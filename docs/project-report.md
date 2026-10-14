@@ -1,87 +1,95 @@
 # Academic Project Report
-## Resource Exchange Platform for College Students
-**Course**: Full Stack Application Lab (CAT 2)  
-**Architecture Style**: Microservices Architecture  
-**Technology Stack**: MERN (MongoDB, Express, React, Node.js) with Tailwind CSS  
+## Industrial Resource Exchange Platform (IREP)
+**Platform Name**: Industrial Resource Exchange Platform (IREP)  
+**Architecture Style**: Decoupled Microservices Architecture with Isolated Databases  
+**Technology Stack**: MERN (MongoDB Atlas, Express.js, React.js with Vite, Node.js) + Tailwind CSS  
 
 ---
 
 ### 1. Problem Statement
-In higher education institutions, students invest thousands of dollars each semester acquiring physical textbooks, specialized scientific calculators, engineering drawing drafters, and hardware lab kits (e.g., Arduino kits, microcontrollers, breadboards). Once course examinations conclude, these expensive academic resources typically sit idle in hostel rooms or get discarded, while incoming cohorts are forced to repurchase the same items at full price. Existing platforms (such as generic classifieds or group chats) lack structured verification, campus-specific categorization, listing type distinctions (Lend vs. Exchange vs. Donate), conflict resolution, and privacy-preserving student authentication.
+
+Across manufacturing ecosystems, large volumes of industrial by-products, production scraps, surplus polymers, and recoverable materials are routinely treated as waste—resulting in heavy landfill tipping fees, regulatory disposal liabilities, and substantial greenhouse gas emissions. Simultaneously, downstream manufacturers (such as recyclers, remanufacturers, and composite material producers) expend vast capital and natural resources extracting or purchasing expensive virgin raw materials.
+
+Traditional commercial avenues lack a specialized B2B industrial exchange mechanism that accommodates:
+1. Technical specifications, chemical compositions, and polymer grades.
+2. Large volume tracking (tonnes, kg, drums, pallets) with variable stock availability.
+3. Environmental compliance manifests (State Pollution Control Board certifications, MSDS documentation).
+4. Multi-criteria circular matching to connect supplier waste streams with receiver input requirements.
+
+---
 
 ### 2. Project Objectives
-1. **Centralize Campus Resource Discovery**: Provide a unified platform where students can search, filter, and discover available academic supplies.
-2. **Implement Real Microservices Architecture**: Decouple the system into two independent backend Node.js/Express services (`resource-service` and `exchange-service`) with isolated databases.
-3. **Establish Genuine Inter-Service REST Communication**: Implement server-to-server HTTP REST calls between the services for resource verification and state synchronization.
-4. **Enforce Academic Business Rules**:
-   - Prevent students from requesting their own resources.
-   - Prevent duplicate pending requests for the same item.
-   - Automatically lock resource availability to "reserved" when a request is approved.
-   - Restore availability when approved requests are cancelled or rejected.
-5. **Deliver a Production-Grade Responsive Frontend**: Build a modern, accessible interface in React (Vite) and Tailwind CSS with light navy/teal aesthetic, 13 functional pages, and no static placeholders.
-6. **Ensure Cloud Deployment Readiness**: Enable independent deployment on Vercel (frontend), Render (both backend microservices), and MongoDB Atlas (isolated databases).
+
+1. **Digital Intermediary for Circular Symbiosis**: Build an industrial marketplace that connects manufacturing plants generating surplus materials with secondary manufacturers requiring those inputs.
+2. **Decoupled Microservices Architecture**: Implement two completely autonomous Node.js/Express backend applications:
+   - `resource-service` (Port 5001): Industrial catalog management, company profiles, and quantity tracking.
+   - `exchange-service` (Port 5002): Procurement requirements, circular matching engine, and B2B proposals.
+3. **Database Isolation**: Ensure zero collection sharing by deploying separate MongoDB databases (`irep_resources_db` and `irep_exchanges_db`).
+4. **Authentic Inter-Service REST Communication**: Execute server-to-server HTTP REST calls protected by `x-service-api-key` for cross-service inventory queries and atomic reservations.
+5. **Multi-Criteria Circular Matching Engine**: Implement a multi-dimensional algorithm calculating compatibility scores (0–100%) across category, quantity, condition, location proximity, and price alignment.
+6. **Atomic Quantity Reservation Guard**: Implement concurrent reservation logic to prevent overselling available industrial materials.
+7. **Professional Industrial UI & Governance**: Develop a comprehensive React single-page application adhering to an industrial navy/slate/teal design system across 17 distinct pages.
 
 ---
 
 ### 3. Technologies Utilized
 
-- **Frontend**: React 19, Vite 6, Tailwind CSS 3.4, Lucide React Icons, React Router v7, Axios.
-- **Microservice 1 (Resource Service)**: Node.js, Express.js, Mongoose ODM, JSON Web Tokens (JWT), Bcrypt.js, Helmet, Morgan, Express Rate Limit.
-- **Microservice 2 (Exchange Service)**: Node.js, Express.js, Mongoose ODM, Axios (Inter-Service REST client), Helmet, Morgan, Express Rate Limit.
-- **Databases**: MongoDB (MongoDB Atlas in cloud / isolated local databases with in-memory fallback).
-- **Automated Testing**: Node.js Native Test Runner (`node:test`), Supertest, Vite Bundler validation.
-- **Deployment Targets**: Vercel (Frontend SPA), Render (Independent Web Services), Git/GitHub (Version Control).
+- **Frontend Client**: React 19, Vite 6, Tailwind CSS 3.4, Lucide React Icons, React Router v7, Axios.
+- **Microservice A (`resource-service`)**: Node.js, Express.js, Mongoose ODM, JWT, Bcrypt.js, Helmet, Morgan, Express Rate Limit.
+- **Microservice B (`exchange-service`)**: Node.js, Express.js, Mongoose ODM, Axios (Inter-Service REST client), Helmet, Morgan, Express Rate Limit.
+- **Databases**: MongoDB Atlas with database isolation (plus local fallback with in-memory Mongo server for evaluation).
+- **Testing & Tooling**: Jest, Supertest, Postman Collection & Environment, Vite Bundler.
+- **Deployment**: Vercel (Frontend), Render (Independent Microservices), Git/GitHub (Version Control).
 
 ---
 
-### 4. Microservices Architecture & Data Flow
+### 4. System Architecture & Inter-Service REST Protocol
 
-#### Independent Services
-- **`resource-service` (Port 5001)**: Owns student authentication, user profiles, and the resource inventory (`/api/auth/*` and `/api/resources/*`). Connected to database `resource_exchange_resources`.
-- **`exchange-service` (Port 5002)**: Owns request negotiations, approval states, and exchange history (`/api/exchanges/*`). Connected to database `resource_exchange_exchanges`.
+#### 4.1 Independent Services
+- **Resource Service (`resource-service`, Port 5001)**: Owns corporate company authentication, regulatory verification status (`Pending`, `Verified`, `Rejected`), and the 10 industrial material categories.
+- **Exchange Service (`exchange-service`, Port 5002)**: Owns procurement requirements, cross-service matching, price negotiation threads, and consignment freight tracking.
 
-#### Server-to-Server REST Bridge
-When a student creates or updates an exchange request, the `exchange-service` does NOT access the Resource database directly. Instead, it issues genuine HTTP REST requests to the `resource-service` using `resourceClient.js`:
-1. `GET /api/resources/:id`: Verifies existence, ownership, and availability.
-2. `PATCH /api/resources/:id/availability`: Automatically transitions status between `'available'` and `'reserved'`/`'exchanged'` when requests are Approved or Cancelled.
-Calls are secured using the internal header `x-service-api-key`.
+#### 4.2 Server-to-Server REST Workflows
+1. **Circular Matching Query**: When an enterprise views matching candidates for a requirement, the Exchange Service calls:
+   `GET /api/resources/matches` on the Resource Service over HTTP REST.
+2. **Proposal Pre-Validation**: When a buyer submits a proposal, the Exchange Service calls:
+   `GET /api/resources/:id` to confirm that `requestedQuantity <= availableQuantity`.
+3. **Atomic Stock Reservation**: When a supplier accepts a proposal, the Exchange Service calls:
+   `PATCH /api/resources/:id/reserve` with `{ quantity, action: 'reserve' }`, atomically locking stock.
+4. **Permanent Inventory Deduction**: Upon verified delivery completion, the Exchange Service calls:
+   `PATCH /api/resources/:id/reserve` with `{ quantity, action: 'complete' }`.
 
 ---
 
 ### 5. Implementation Highlights
 
-1. **Clean Separation of Concerns**: Zero collection sharing between services. Entities in the Exchange Service reference Resources and Users by IDs.
-2. **Robust Error Handling**: Centralized error middleware in both services translates Mongoose `CastError`, duplicate key errors (11000), and validation errors into friendly client responses.
-3. **Resilient Inter-Service Client**: The HTTP client incorporates a 7-second timeout and catches connection drops (`ECONNREFUSED`), returning clear `503 Service Unavailable` statuses instead of hanging.
-4. **1-Click Evaluation Accounts**: Seed script generates 3 realistic student accounts (Priya Sharma - CSE, Rahul Verma - ECE, Ananya Iyer - Mech) and 8 realistic items across Textbooks, Lab Equipment, Calculators, Notes, and Stationery. The login screen features 1-click credential filling for immediate evaluation.
-5. **Zero-Setup Database Fallback**: If an external MongoDB Atlas cluster is not configured, both services automatically fall back to an internal in-memory database instance, guaranteeing that the application and test suites run out of the box on any machine.
+1. **10 Industrial Material Categories**: Textile & fabric waste, Metal scraps, Plastic waste & reusable polymers, Paper & cardboard, Wood scraps & sawdust, Agricultural by-products, Construction & demolition materials, Reusable industrial packaging, Surplus raw materials, and Other recoverable by-products.
+2. **Dual View Marketplace**: Grid card catalog (`ResourceCard.jsx`) and dense industrial registry table (`MaterialTable.jsx`).
+3. **Multi-Factor Matching Engine**: Evaluates 5 dimensions: Category & Keywords (35%), Quantity (25%), Condition (15%), Proximity (15%), and Price (10%).
+4. **Honest Corporate Verification**: Newly registered enterprises default to `Pending` until platform administrators inspect business registration references (GSTIN/CIN).
+5. **1-Click Evaluator Accounts**: Includes 5 realistic enterprise profiles (Apex Textiles, Kalyani Forge, GreenLeaf Polymers, Sahyadri Eco-Board, and IREP Admin) with 1-click credential filling.
 
 ---
 
 ### 6. Testing & Results
 
-- **Automated Tests**: 22 automated integration tests executed (13 in Resource Service, 9 in Exchange Service).
-- **Pass Rate**: 100% (22/22 passed).
-- **Production Bundle**: Successfully built in 5.33 seconds with zero lint or bundling errors.
-- **Verified Edge Cases**:
-  - Duplicate registration prevention.
-  - Non-owner edit and delete blocking (`403 Forbidden`).
-  - Self-request prevention (`400 Bad Request`).
-  - Duplicate pending request prevention (`400 Bad Request`).
-  - Real-time availability lock and restore via inter-service REST calls.
+- **Automated Test Suites**: 13 automated integration tests across both microservices (7 in `resource-service`, 6 in `exchange-service`).
+- **Pass Rate**: 100% (13/13 passed).
+- **Concurrency & Anti-Overselling**: Validated that concurrent reservation requests exceeding available stock return `409 Conflict`.
+- **Frontend Production Build**: Successfully compiled with Vite in 7.75s with zero syntax or bundle errors.
 
 ---
 
-### 7. Limitations
+### 7. Business Value & Environmental Impact
 
-1. **Distributed Transactions**: While status updates are synchronized via REST, partial failures (e.g., Exchange Service successfully approves request but network drops before Resource Service updates availability) are handled through application-level logging and retry logic rather than a distributed Two-Phase Commit (2PC) or Saga orchestrator.
-2. **In-Person Physical Exchange**: The platform coordinates digital approval and records meeting points on campus; physical verification relies on student honor code.
+1. **Landfill Diversion**: Diverts metric tons of industrial by-products directly into secondary production cycles.
+2. **Cost Reduction**: Suppliers eliminate hazardous disposal and tipping fees; buyers obtain quality inputs at substantial discounts compared to virgin market rates.
+3. **Scope 3 Carbon Abatement**: Quantifiable carbon reduction through avoided virgin resource extraction and reduced transport distances via regional proximity matching.
 
 ---
 
-### 8. Future Enhancements
+### 8. Limitations & Future Enhancements
 
-1. **Real-Time WebSockets / Push Notifications**: Integrate Socket.io for immediate alerts when requests are received or approved.
-2. **Event-Driven Messaging via RabbitMQ / Kafka**: Transition inter-service REST updates to asynchronous message queues for eventual consistency under high traffic.
-3. **In-App Direct Chat**: Allow student pairs to chat directly within the platform once a request is approved to coordinate campus pickup times.
-4. **Barcode / QR Code Handover Verification**: Generate a one-time QR code upon request approval that the lender scans on handover to mark the exchange completed.
+1. **Distributed Transaction Resilience**: While atomic quantity reservation prevents overselling, network partitions during cross-service updates utilize idempotent reservation IDs and retries rather than full distributed Two-Phase Commit (2PC).
+2. **IoT Weighbridge & Smart Sensor Integration**: Future iterations can interface with industrial weighbridges at facility gates to automatically confirm intake weights and trigger real-time stock deduction.
+3. **Blockchain Circular Traceability**: Implement immutable ledger manifests (e.g. Hyperledger Fabric) to track hazardous waste custody chains and automate environmental compliance reporting for state pollution control boards.
