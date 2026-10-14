@@ -7,11 +7,24 @@ echo           RESOURCE EXCHANGE PLATFORM - STOPPING SERVICES
 echo ======================================================================
 echo.
 
-echo Stopping services listening on ports 5001, 5002, 5173...
+echo Stopping services on ports 5001, 5002, 5173...
 
-powershell -Command "foreach ($port in @(5001, 5002, 5173)) { $proc = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess; if ($proc) { Stop-Process -Id $proc -Force -ErrorAction SilentlyContinue; Write-Host ('[STOPPED] Terminated process on port ' + $port) } else { Write-Host ('[INFO] Port ' + $port + ' is already clear') } }"
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5001 ^| findstr LISTENING') do (
+    taskkill /F /PID %%a >nul 2>nul
+    echo [STOPPED] Terminated process on port 5001 (PID %%a)
+)
+
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5002 ^| findstr LISTENING') do (
+    taskkill /F /PID %%a >nul 2>nul
+    echo [STOPPED] Terminated process on port 5002 (PID %%a)
+)
+
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING') do (
+    taskkill /F /PID %%a >nul 2>nul
+    echo [STOPPED] Terminated process on port 5173 (PID %%a)
+)
 
 echo.
-echo All microservices and frontend instances have been stopped.
+echo All microservices and frontend instances have been stopped cleanly.
 echo ======================================================================
-timeout /t 3
+timeout /t 2 >nul

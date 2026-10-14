@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
 const { connectDB } = require('./src/config/db');
 const { errorHandler } = require('./src/middleware/errorHandler');
 
@@ -23,6 +24,24 @@ app.use(express.urlencoded({ extended: true }));
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
+
+// Database connection auto-reconnect guard
+app.use(async (req, res, next) => {
+  if (req.path === '/health' || req.path === '/api/health') {
+    return next();
+  }
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectDB();
+    } catch (err) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database is initializing, please retry in a moment.'
+      });
+    }
+  }
+  next();
+});
 
 // Mount routes
 app.use('/', healthRoutes);
@@ -55,6 +74,9 @@ if (process.env.NODE_ENV !== 'test') {
     });
   }).catch((err) => {
     console.error('Failed to initialize Exchange Service database on startup:', err);
+    server = app.listen(PORT, () => {
+      console.log(`🔄 Exchange Service running on port ${PORT} (retrying DB in background)`);
+    });
   });
 }
 

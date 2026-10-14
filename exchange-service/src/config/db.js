@@ -3,11 +3,15 @@ const mongoose = require('mongoose');
 let mongodInstance = null;
 
 const connectDB = async () => {
-  const uri = process.env.MONGODB_URI;
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/resource_exchange_exchanges';
 
   try {
     if (uri && !uri.includes('memory')) {
-      console.log(`[Exchange Service] Attempting MongoDB connection to configured URI...`);
+      console.log(`[Exchange Service] Connecting to MongoDB...`);
       const conn = await mongoose.connect(uri, {
         serverSelectionTimeoutMS: 5000,
       });
@@ -16,13 +20,15 @@ const connectDB = async () => {
     }
   } catch (err) {
     console.warn(`[Exchange Service] Primary MongoDB connection failed (${err.message}).`);
-    console.warn(`[Exchange Service] Falling back to automated in-memory MongoDB instance for local demonstration.`);
+    console.warn(`[Exchange Service] Falling back to in-memory MongoDB instance.`);
   }
 
   // Fallback to in-memory MongoDB server
   try {
-    const { MongoMemoryServer } = require('mongodb-memory-server');
-    mongodInstance = await MongoMemoryServer.create();
+    if (!mongodInstance) {
+      const { MongoMemoryServer } = require('mongodb-memory-server');
+      mongodInstance = await MongoMemoryServer.create();
+    }
     const memoryUri = mongodInstance.getUri();
     const conn = await mongoose.connect(memoryUri);
     console.log(`[Exchange Service] Connected to In-Memory MongoDB at: ${memoryUri}`);
@@ -38,6 +44,7 @@ const disconnectDB = async () => {
     await mongoose.disconnect();
     if (mongodInstance) {
       await mongodInstance.stop();
+      mongodInstance = null;
     }
   } catch (err) {
     console.error('[Exchange Service] Error disconnecting MongoDB:', err);

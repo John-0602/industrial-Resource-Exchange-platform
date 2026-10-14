@@ -35,13 +35,19 @@ if not exist "frontend\node_modules" (
 )
 
 echo.
-echo [2/4] Ensuring demo student accounts and sample resources are seeded...
+echo [2/4] Cleaning any previous processes on ports 5001, 5002, 5173...
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5001 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>nul
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5002 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>nul
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173 ^| findstr LISTENING') do taskkill /F /PID %%a >nul 2>nul
+
+echo.
+echo [3/4] Ensuring demo student accounts and sample resources are seeded...
 cd resource-service
 call npm run seed >nul 2>nul
 cd ..
 
 echo.
-echo [3/4] Launching Microservices in independent processes...
+echo [4/5] Launching Microservices in independent processes...
 echo.
 
 REM Start Microservice 1: Resource Service on Port 5001
