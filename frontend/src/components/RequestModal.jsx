@@ -21,8 +21,9 @@ export const RequestModal = ({ resource, isOpen, onClose, onSuccess }) => {
   if (!isOpen || !resource) return null;
 
   const resourceId = resource._id || resource.id;
-  const supplierId = resource.supplierCompanyId;
-  const isOwner = user && (user.id === supplierId || user._id === supplierId);
+  const supplierId = resource.supplierCompanyId || resource.supplier?.id || resource.supplier?._id;
+  const myUserId = user?.id || user?._id;
+  const isOwner = Boolean(user && supplierId && String(myUserId) === String(supplierId));
 
   const availableQty = resource.availableQuantity || 0;
   const totalAmount = (Number(requestedQuantity) || 0) * (Number(proposedPrice) || 0);

@@ -12,7 +12,7 @@ const generateToken = (company) => {
       verificationStatus: company.verificationStatus,
       role: company.role
     },
-    process.env.JWT_SECRET || 'super_secret_jwt_key_for_irep_platform_2025',
+    process.env.JWT_SECRET || 'super_secret_jwt_key_for_resource_service_college_2025',
     { expiresIn: '7d' }
   );
 };
@@ -93,8 +93,12 @@ const registerCompany = async (req, res, next) => {
           email: company.email,
           industrySector: company.industrySector,
           contactPerson: company.contactPerson,
+          address: company.address || '',
           city: company.city,
           state: company.state,
+          country: company.country || 'India',
+          phone: company.phone || '',
+          description: company.description || '',
           companyRole: company.companyRole,
           verificationStatus: company.verificationStatus,
           role: company.role,
@@ -153,8 +157,12 @@ const loginCompany = async (req, res, next) => {
           email: company.email,
           industrySector: company.industrySector,
           contactPerson: company.contactPerson,
+          address: company.address || '',
           city: company.city,
           state: company.state,
+          country: company.country || 'India',
+          phone: company.phone || '',
+          description: company.description || '',
           companyRole: company.companyRole,
           verificationStatus: company.verificationStatus,
           role: company.role,

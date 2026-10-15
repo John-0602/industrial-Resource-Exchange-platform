@@ -36,7 +36,10 @@ export const ProfilePage = () => {
 
         const myCompanyId = user.id || user._id;
         const myListings = (listingsRes.data?.data || []).filter(
-          (r) => r.supplierCompanyId === myCompanyId || r.supplierCompanyName === user.companyName
+          (r) =>
+            String(r.supplier?.id || r.supplier?._id || r.supplierCompanyId) === String(myCompanyId) ||
+            (r.supplier?.name && r.supplier.name === (user.name || user.companyName)) ||
+            (r.supplierCompanyName && r.supplierCompanyName === (user.name || user.companyName))
         );
 
         setProfileStats({
@@ -70,7 +73,7 @@ export const ProfilePage = () => {
               <div className="space-y-1 mb-1">
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                    {user.companyName}
+                    {user.name || user.companyName}
                   </h1>
                   <CompanyBadge status={user.verificationStatus || 'Pending'} />
                 </div>
@@ -88,7 +91,7 @@ export const ProfilePage = () => {
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registration Ref / GSTIN</p>
                 <p className="text-xs font-semibold text-slate-900 font-mono uppercase">
-                  {user.registrationNumber || 'GSTIN-PENDING'}
+                  {user.registrationRef || user.registrationNumber || 'GSTIN-PENDING'}
                 </p>
               </div>
             </div>

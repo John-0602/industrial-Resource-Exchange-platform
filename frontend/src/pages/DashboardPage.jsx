@@ -65,7 +65,11 @@ export const DashboardPage = () => {
         const allResources = listingsRes.data?.data || [];
         const myCompanyId = user?.id || user?._id;
         const myItems = allResources.filter(
-          (r) => r.supplierCompanyId === myCompanyId || r.supplierCompanyName === user?.companyName
+          (r) =>
+            String(r.supplier?.id || r.supplier?._id || r.supplierCompanyId) === String(myCompanyId) ||
+            (r.supplier?.name && r.supplier.name === user?.name) ||
+            (r.supplierCompanyName && r.supplierCompanyName === user?.name) ||
+            r.supplierCompanyName === user?.companyName
         );
 
         const totalQty = myItems.reduce((acc, curr) => acc + (Number(curr.availableQuantity) || 0), 0);

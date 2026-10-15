@@ -10,22 +10,39 @@ const createRequirement = async (req, res, next) => {
   try {
     const {
       title,
+      materialTitle,
       materialCategory,
+      category,
       specifications,
+      specificationDetails,
       requiredQuantity,
       unit,
       acceptableCondition,
-      deliveryLocation,
+      condition,
+      deliveryLocation = {},
       maxBudget,
+      maxBudgetPerUnit,
       currency,
       requiredByDate,
-      additionalHandling
+      additionalHandling,
+      handlingRequirements
     } = req.body;
 
-    if (!title || !materialCategory || !specifications || !requiredQuantity || !unit || !acceptableCondition || !deliveryLocation?.city) {
+    const finalTitle = (title || materialTitle || '').trim();
+    const finalCategory = (materialCategory || category || '').trim();
+    const finalSpecs = (specifications || specificationDetails || '').trim();
+    const finalCondition = (acceptableCondition || condition || 'Any Usable Grade').trim();
+    const finalBudget = maxBudget !== undefined ? Number(maxBudget) : (maxBudgetPerUnit !== undefined ? Number(maxBudgetPerUnit) : 0);
+    const finalHandling = (additionalHandling || handlingRequirements || '').trim();
+
+    const city = (deliveryLocation.city || req.body.city || req.user?.city || '').trim();
+    const state = (deliveryLocation.state || req.body.state || req.user?.state || '').trim();
+    const address = (deliveryLocation.address || deliveryLocation.facilityAddress || req.body.facilityAddress || req.user?.address || '').trim();
+
+    if (!finalTitle || !finalCategory || !finalSpecs || !requiredQuantity || !unit || !city || !state) {
       return res.status(400).json({
         success: false,
-        message: 'Please complete title, category, specifications, quantity, unit, condition, and delivery location'
+        message: 'Please complete title, category, specifications, quantity, unit, city, and state'
       });
     }
 
@@ -33,21 +50,21 @@ const createRequirement = async (req, res, next) => {
       companyId: req.user.id,
       companyName: req.user.name,
       contactEmail: req.user.email,
-      title: title.trim(),
-      materialCategory,
-      specifications: specifications.trim(),
+      title: finalTitle,
+      materialCategory: finalCategory,
+      specifications: finalSpecs,
       requiredQuantity: Number(requiredQuantity),
       unit,
-      acceptableCondition: acceptableCondition.trim(),
+      acceptableCondition: finalCondition,
       deliveryLocation: {
-        city: deliveryLocation.city.trim(),
-        state: deliveryLocation.state.trim(),
-        address: deliveryLocation.address || ''
+        city,
+        state,
+        address
       },
-      maxBudget: maxBudget ? Number(maxBudget) : 0,
+      maxBudget: isNaN(finalBudget) ? 0 : Math.max(0, finalBudget),
       currency: currency || 'INR',
       requiredByDate: requiredByDate ? new Date(requiredByDate) : null,
-      additionalHandling: additionalHandling ? additionalHandling.trim() : ''
+      additionalHandling: finalHandling
     });
 
     res.status(201).json({
@@ -178,8 +195,8 @@ const createExchangeRequest = async (req, res, next) => {
     }
 
     // Step 2: Prevent company from requesting its own resource
-    const supplierId = resource.supplier?.id?.toString() || resource.supplier?._id?.toString();
-    if (supplierId === req.user.id.toString()) {
+    const supplierId = resource.supplier?.id?.toString() || resource.supplier?._id?.toString() || resource.supplierCompanyId?.toString();
+    if (supplierId && supplierId === req.user.id.toString()) {
       return res.status(400).json({
         success: false,
         message: 'Operation prohibited: You cannot request materials listed by your own facility'
@@ -208,16 +225,16 @@ const createExchangeRequest = async (req, res, next) => {
       });
     }
 
-    const unitPrice = proposedPricePerUnit !== undefined ? Number(proposedPricePerUnit) : resource.indicativePrice;
+    const unitPrice = proposedPricePerUnit !== undefined ? Number(proposedPricePerUnit) : (resource.indicativePrice || resource.pricePerUnit || 0);
     const totalAmount = unitPrice * qty;
 
     const exchange = await Exchange.create({
       resourceId: resource._id,
       resourceTitle: resource.title,
-      materialCategory: resource.materialCategory,
-      supplierCompanyId: supplierId,
-      supplierCompanyName: resource.supplier.name,
-      supplierEmail: resource.supplier.email,
+      materialCategory: resource.materialCategory || resource.category,
+      supplierCompanyId: supplierId || 'unknown_supplier',
+      supplierCompanyName: resource.supplier?.name || resource.supplierCompanyName || resource.supplierCompanyDisplayName || 'Industrial Enterprise',
+      supplierEmail: resource.supplier?.email || 'contact@supplier.com',
       receiverCompanyId: req.user.id,
       receiverCompanyName: req.user.name,
       receiverEmail: req.user.email,

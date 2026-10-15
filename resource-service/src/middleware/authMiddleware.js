@@ -12,7 +12,7 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(
         token,
-        process.env.JWT_SECRET || 'super_secret_jwt_key_for_irep_platform_2025'
+        process.env.JWT_SECRET || 'super_secret_jwt_key_for_resource_service_college_2025'
       );
 
       const company = await Company.findById(decoded.id).select('-password');

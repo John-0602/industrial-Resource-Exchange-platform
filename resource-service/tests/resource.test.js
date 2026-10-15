@@ -147,4 +147,37 @@ describe('Industrial Resource Service API Tests', () => {
     assert.equal(resRelease.body.data.availableQuantity, 5000);
     assert.equal(resRelease.body.data.reservedQuantity, 0);
   });
+
+  test('POST /api/resources creates material with frontend aliases (category, materialCondition, pricePerUnit, safetyHandling)', async () => {
+    const res = await request(app)
+      .post('/api/resources')
+      .set('Authorization', `Bearer ${supplierToken}`)
+      .send({
+        title: 'Industrial Wood Waste and Pallets',
+        category: 'Wood scraps and sawdust',
+        resourceType: 'Surplus',
+        description: 'Seasoned pine and hardwood pallets suitable for remanufacturing or chipping.',
+        materialCondition: 'Used/Secondary',
+        composition: 'Softwood / Hardwood blend',
+        totalQuantity: 200,
+        unit: 'tonnes',
+        pricePerUnit: 18,
+        minOrderQuantity: 10,
+        facilityAddress: 'Plot 12, Pimpri Industrial Area',
+        city: 'Pune',
+        state: 'Maharashtra',
+        safetyHandling: 'Stack on dry level surface away from open flames.'
+      });
+
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.materialCategory, 'Wood scraps and sawdust');
+    assert.equal(res.body.data.category, 'Wood scraps and sawdust');
+    assert.equal(res.body.data.condition, 'Used/Secondary');
+    assert.equal(res.body.data.materialCondition, 'Used/Secondary');
+    assert.equal(res.body.data.indicativePrice, 18);
+    assert.equal(res.body.data.pricePerUnit, 18);
+    assert.equal(res.body.data.pickupLocation.city, 'Pune');
+    assert.ok(res.body.data.supplierCompanyDisplayName);
+  });
 });
+

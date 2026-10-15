@@ -51,6 +51,19 @@ export const AddResourcePage = () => {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // Synchronize form with logged in enterprise facility profile
+  React.useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        facilityAddress: prev.facilityAddress || user.address || '',
+        city: prev.city || user.city || '',
+        state: prev.state || user.state || '',
+        country: prev.country || user.country || 'India'
+      }));
+    }
+  }, [user]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -63,41 +76,72 @@ export const AddResourcePage = () => {
     e.preventDefault();
     setFormError('');
 
+    if (!formData.title.trim()) {
+      setFormError('Please enter a material title & specification');
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      setFormError('Please enter a detailed industrial description');
+      return;
+    }
+
     if (Number(formData.totalQuantity) <= 0) {
       setFormError('Total quantity must be greater than zero');
       return;
     }
 
+    if (!formData.city.trim()) {
+      setFormError('Please specify the city / industrial hub for logistics pickup');
+      return;
+    }
+
+    if (!formData.state.trim()) {
+      setFormError('Please specify the state / province for logistics pickup');
+      return;
+    }
+
     setLoading(true);
     try {
+      const pickupAddress = formData.facilityAddress.trim() || `${formData.city.trim()} Industrial Hub Logistics Gate`;
+      const handlingNotes = formData.safetyHandling.trim() || 'Store in dry covered facility away from spark sources. Non-hazardous industrial commodity.';
+
       const payload = {
         title: formData.title.trim(),
+        materialCategory: formData.category,
         category: formData.category,
         resourceType: formData.resourceType,
         description: formData.description.trim(),
         totalQuantity: Number(formData.totalQuantity),
         availableQuantity: Number(formData.totalQuantity),
         unit: formData.unit,
+        condition: formData.materialCondition,
         materialCondition: formData.materialCondition,
+        chemicalComposition: formData.composition.trim(),
         composition: formData.composition.trim(),
         intendedUse: formData.intendedUse.trim(),
+        indicativePrice: Number(formData.pricePerUnit) || 0,
         pricePerUnit: Number(formData.pricePerUnit) || 0,
         currency: formData.currency,
         minOrderQuantity: Number(formData.minOrderQuantity) || 1,
         pickupLocation: {
-          address: formData.facilityAddress.trim(),
+          address: pickupAddress,
           city: formData.city.trim(),
           state: formData.state.trim(),
-          country: formData.country.trim(),
+          country: formData.country.trim() || 'India',
           postalCode: formData.postalCode.trim(),
+          pincode: formData.postalCode.trim(),
           loadingEquipmentAvailable: Boolean(formData.loadingEquipmentAvailable)
         },
-        safetyHandling: formData.safetyHandling.trim(),
+        handlingStorageInfo: handlingNotes,
+        safetyHandling: handlingNotes,
+        complianceInfo: formData.pcbCategory ? `${formData.pcbCategory}. ${formData.hazardousMaterial ? 'Hazardous waste.' : 'Non-hazardous residue.'}` : 'Complies with industrial waste regulations',
         compliance: {
           hazardousMaterial: Boolean(formData.hazardousMaterial),
           pcbCategory: formData.pcbCategory.trim(),
           msdsUrl: formData.msdsUrl.trim()
         },
+        documentationUrl: formData.msdsUrl.trim(),
         imageUrl: formData.imageUrl.trim()
       };
 

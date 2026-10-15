@@ -28,13 +28,22 @@ export const MyListingsPage = () => {
   const fetchMyListings = async () => {
     setLoading(true);
     try {
-      const res = await resourceApi.get('/api/resources?limit=100');
+      const myCompanyId = user?.id || user?._id;
+      const res = await resourceApi.get(`/api/resources?limit=100&allStatuses=true&supplierId=${myCompanyId}`);
       if (res.data.success) {
-        const myCompanyId = user?.id || user?._id;
-        const filtered = (res.data.data || []).filter(
-          (r) => r.supplierCompanyId === myCompanyId || r.supplierCompanyName === user?.companyName
-        );
-        setListings(filtered);
+        let items = res.data.data || [];
+        if (items.length === 0) {
+          // Fallback fetch all and filter client-side if needed
+          const fallbackRes = await resourceApi.get('/api/resources?limit=100&allStatuses=true');
+          const allItems = fallbackRes.data.data || [];
+          items = allItems.filter(
+            (r) =>
+              String(r.supplier?.id || r.supplier?._id || r.supplierCompanyId) === String(myCompanyId) ||
+              (r.supplier?.name && r.supplier.name === user?.name) ||
+              (r.supplierCompanyName && r.supplierCompanyName === user?.name)
+          );
+        }
+        setListings(items);
       }
     } catch (err) {
       console.error('Failed to load listings:', err);

@@ -165,6 +165,43 @@ const resourceSchema = new mongoose.Schema(
   }
 );
 
+// Virtual properties for backward compatibility with frontend schemas
+resourceSchema.virtual('category').get(function () {
+  return this.materialCategory;
+});
+resourceSchema.virtual('materialCondition').get(function () {
+  return this.condition;
+});
+resourceSchema.virtual('pricePerUnit').get(function () {
+  return this.indicativePrice;
+});
+resourceSchema.virtual('composition').get(function () {
+  return this.chemicalComposition;
+});
+resourceSchema.virtual('safetyHandling').get(function () {
+  return this.handlingStorageInfo;
+});
+resourceSchema.virtual('supplierCompanyId').get(function () {
+  return this.supplier?.id;
+});
+resourceSchema.virtual('supplierCompanyName').get(function () {
+  return this.supplier?.name;
+});
+resourceSchema.virtual('supplierCompanyDisplayName').get(function () {
+  return this.supplier?.name;
+});
+resourceSchema.virtual('supplierVerificationStatus').get(function () {
+  return this.supplier?.verificationStatus || 'Verified';
+});
+resourceSchema.virtual('compliance').get(function () {
+  const isHazardous = /hazardous|danger|flammable|toxic|chemical waste/i.test(this.complianceInfo || '');
+  return {
+    hazardousMaterial: isHazardous,
+    pcbCategory: this.complianceInfo || 'Compliant with industrial standards',
+    msdsUrl: this.documentationUrl || ''
+  };
+});
+
 // High-performance search and matching indexes
 resourceSchema.index({ title: 'text', description: 'text', chemicalComposition: 'text', intendedUse: 'text' });
 resourceSchema.index({ materialCategory: 1, resourceType: 1, availabilityStatus: 1 });
@@ -173,3 +210,4 @@ resourceSchema.index({ 'pickupLocation.city': 1, 'pickupLocation.state': 1 });
 resourceSchema.index({ availableQuantity: 1, indicativePrice: 1 });
 
 module.exports = mongoose.model('Resource', resourceSchema);
+

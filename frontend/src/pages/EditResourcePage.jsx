@@ -51,16 +51,16 @@ export const EditResourcePage = () => {
           const r = res.data.data;
           setFormData({
             title: r.title || '',
-            category: r.category || industrialCategories[1],
+            category: r.materialCategory || r.category || industrialCategories[1],
             resourceType: r.resourceType || 'By-product',
             description: r.description || '',
             totalQuantity: r.totalQuantity || r.availableQuantity || 0,
             availableQuantity: r.availableQuantity || 0,
             unit: r.unit || 'kg',
-            materialCondition: r.materialCondition || 'Production Scrap',
-            composition: r.composition || '',
+            materialCondition: r.condition || r.materialCondition || 'Production Scrap',
+            composition: r.chemicalComposition || r.composition || '',
             intendedUse: r.intendedUse || '',
-            pricePerUnit: r.pricePerUnit || 0,
+            pricePerUnit: r.indicativePrice !== undefined ? r.indicativePrice : (r.pricePerUnit || 0),
             currency: r.currency || 'INR',
             minOrderQuantity: r.minOrderQuantity || 1,
             facilityAddress: r.pickupLocation?.address || '',
@@ -68,10 +68,10 @@ export const EditResourcePage = () => {
             state: r.pickupLocation?.state || '',
             country: r.pickupLocation?.country || 'India',
             loadingEquipmentAvailable: Boolean(r.pickupLocation?.loadingEquipmentAvailable),
-            safetyHandling: r.safetyHandling || '',
-            hazardousMaterial: Boolean(r.compliance?.hazardousMaterial),
-            pcbCategory: r.compliance?.pcbCategory || '',
-            msdsUrl: r.compliance?.msdsUrl || '',
+            safetyHandling: r.handlingStorageInfo || r.safetyHandling || '',
+            hazardousMaterial: Boolean(r.compliance?.hazardousMaterial || r.complianceInfo?.toLowerCase().includes('hazard')),
+            pcbCategory: r.compliance?.pcbCategory || r.complianceInfo || '',
+            msdsUrl: r.compliance?.msdsUrl || r.documentationUrl || '',
             imageUrl: r.imageUrl || '',
             availabilityStatus: r.availabilityStatus || 'available'
           });
@@ -103,15 +103,19 @@ export const EditResourcePage = () => {
     try {
       const payload = {
         title: formData.title.trim(),
+        materialCategory: formData.category,
         category: formData.category,
         resourceType: formData.resourceType,
         description: formData.description.trim(),
         totalQuantity: Number(formData.totalQuantity),
         availableQuantity: Number(formData.availableQuantity),
         unit: formData.unit,
+        condition: formData.materialCondition,
         materialCondition: formData.materialCondition,
+        chemicalComposition: formData.composition.trim(),
         composition: formData.composition.trim(),
         intendedUse: formData.intendedUse.trim(),
+        indicativePrice: Number(formData.pricePerUnit) || 0,
         pricePerUnit: Number(formData.pricePerUnit) || 0,
         currency: formData.currency,
         minOrderQuantity: Number(formData.minOrderQuantity) || 1,
@@ -122,12 +126,15 @@ export const EditResourcePage = () => {
           country: formData.country.trim(),
           loadingEquipmentAvailable: Boolean(formData.loadingEquipmentAvailable)
         },
+        handlingStorageInfo: formData.safetyHandling.trim(),
         safetyHandling: formData.safetyHandling.trim(),
+        complianceInfo: formData.pcbCategory ? `${formData.pcbCategory}. ${formData.hazardousMaterial ? 'Hazardous waste.' : 'Non-hazardous residue.'}` : 'Compliant with regulations',
         compliance: {
           hazardousMaterial: Boolean(formData.hazardousMaterial),
           pcbCategory: formData.pcbCategory.trim(),
           msdsUrl: formData.msdsUrl.trim()
         },
+        documentationUrl: formData.msdsUrl.trim(),
         imageUrl: formData.imageUrl.trim(),
         availabilityStatus: formData.availabilityStatus
       };

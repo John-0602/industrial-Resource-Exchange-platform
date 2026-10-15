@@ -9,27 +9,48 @@ const createResource = async (req, res, next) => {
       title,
       description,
       materialCategory,
+      category,
       resourceType,
       condition,
+      materialCondition,
       chemicalComposition,
+      composition,
       totalQuantity,
       unit,
       minOrderQuantity,
       indicativePrice,
+      pricePerUnit,
       currency,
       intendedUse,
       handlingStorageInfo,
+      safetyHandling,
       complianceInfo,
-      pickupLocation,
+      compliance,
+      pickupLocation = {},
       imageUrl,
       documentationUrl,
       expiryDate
     } = req.body;
 
-    if (!title || !description || !materialCategory || !resourceType || !condition || !totalQuantity || !unit || !handlingStorageInfo || !pickupLocation?.city) {
+    const finalCategory = (materialCategory || category || '').trim();
+    const finalCondition = (condition || materialCondition || '').trim();
+    const finalHandling = (handlingStorageInfo || safetyHandling || 'Store in standard covered industrial facility. Standard handling protocols apply.').trim();
+    const finalPrice = indicativePrice !== undefined ? Number(indicativePrice) : (pricePerUnit !== undefined ? Number(pricePerUnit) : 0);
+    const finalComposition = (chemicalComposition || composition || '').trim();
+    const finalCompliance = (complianceInfo || (compliance?.pcbCategory ? `${compliance.pcbCategory}. ${compliance?.hazardousMaterial ? 'Hazardous waste.' : 'Non-hazardous residue.'}` : '') || 'Compliant with industrial waste regulations').trim();
+    const finalDocUrl = documentationUrl || compliance?.msdsUrl || '';
+
+    const city = (pickupLocation.city || req.body.city || req.company?.city || '').trim();
+    const state = (pickupLocation.state || req.body.state || req.company?.state || '').trim();
+    const address = (pickupLocation.address || req.body.facilityAddress || req.company?.address || `${city || 'Industrial'} Logistics Hub`).trim();
+    const country = (pickupLocation.country || req.body.country || req.company?.country || 'India').trim();
+    const pincode = (pickupLocation.pincode || pickupLocation.postalCode || req.body.postalCode || '').trim();
+    const facilityName = (pickupLocation.facilityName || req.company?.name || 'Logistics Facility').trim();
+
+    if (!title?.trim() || !description?.trim() || !finalCategory || !resourceType?.trim() || !finalCondition || !totalQuantity || !unit || !city || !state) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide title, description, category, resource type, condition, quantity, unit, handling info, and pickup location'
+        message: 'Please provide title, description, category, resource type, condition, quantity, unit, city, and state'
       });
     }
 
@@ -44,27 +65,27 @@ const createResource = async (req, res, next) => {
     const resource = await Resource.create({
       title: title.trim(),
       description: description.trim(),
-      materialCategory,
-      resourceType,
-      condition: condition.trim(),
-      chemicalComposition: chemicalComposition ? chemicalComposition.trim() : '',
+      materialCategory: finalCategory,
+      resourceType: resourceType.trim(),
+      condition: finalCondition,
+      chemicalComposition: finalComposition,
       totalQuantity: qty,
       availableQuantity: qty,
       reservedQuantity: 0,
       unit,
       minOrderQuantity: minOrderQuantity ? Number(minOrderQuantity) : 1,
-      indicativePrice: indicativePrice !== undefined ? Number(indicativePrice) : 0,
+      indicativePrice: isNaN(finalPrice) ? 0 : Math.max(0, finalPrice),
       currency: currency || 'INR',
       intendedUse: intendedUse ? intendedUse.trim() : '',
-      handlingStorageInfo: handlingStorageInfo.trim(),
-      complianceInfo: complianceInfo ? complianceInfo.trim() : 'Compliant with industrial waste regulations',
+      handlingStorageInfo: finalHandling,
+      complianceInfo: finalCompliance,
       pickupLocation: {
-        facilityName: pickupLocation.facilityName || req.company.name,
-        address: pickupLocation.address || req.company.address,
-        city: pickupLocation.city.trim(),
-        state: pickupLocation.state.trim(),
-        country: pickupLocation.country || 'India',
-        pincode: pickupLocation.pincode || ''
+        facilityName,
+        address,
+        city,
+        state,
+        country,
+        pincode
       },
       supplier: {
         id: req.company._id,
@@ -75,8 +96,8 @@ const createResource = async (req, res, next) => {
         state: req.company.state,
         verificationStatus: req.company.verificationStatus || 'Pending'
       },
-      imageUrl: imageUrl || '',
-      documentationUrl: documentationUrl || '',
+      imageUrl: imageUrl ? imageUrl.trim() : '',
+      documentationUrl: finalDocUrl ? finalDocUrl.trim() : '',
       expiryDate: expiryDate ? new Date(expiryDate) : null,
       availabilityStatus: 'available',
       moderationStatus: 'Approved'
@@ -91,6 +112,7 @@ const createResource = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // @desc    Get all resources with filters and pagination
 // @route   GET /api/resources
@@ -132,6 +154,15 @@ const getResources = async (req, res, next) => {
 
     if (req.query.state) {
       query['pickupLocation.state'] = { $regex: req.query.state, $options: 'i' };
+    }
+
+    if (req.query.location) {
+      const locRegex = { $regex: req.query.location.trim(), $options: 'i' };
+      query.$or = [
+        { 'pickupLocation.city': locRegex },
+        { 'pickupLocation.state': locRegex },
+        { 'pickupLocation.address': locRegex }
+      ];
     }
 
     if (req.query.minQty) {
@@ -192,7 +223,7 @@ const searchResources = async (req, res, next) => {
     }
 
     if (req.query.category && req.query.category !== 'All') {
-      query.$or = [{ category: req.query.category }, { materialCategory: req.query.category }];
+      query.materialCategory = req.query.category;
     }
 
     if (req.query.resourceType && req.query.resourceType !== 'All') {
@@ -268,9 +299,18 @@ const updateResource = async (req, res, next) => {
       }
     });
 
+    if (req.body.category !== undefined) resource.materialCategory = req.body.category;
+    if (req.body.materialCondition !== undefined) resource.condition = req.body.materialCondition;
+    if (req.body.pricePerUnit !== undefined) resource.indicativePrice = Number(req.body.pricePerUnit);
+    if (req.body.composition !== undefined) resource.chemicalComposition = req.body.composition;
+    if (req.body.safetyHandling !== undefined) resource.handlingStorageInfo = req.body.safetyHandling;
+
     if (req.body.pickupLocation) {
       resource.pickupLocation = { ...resource.pickupLocation, ...req.body.pickupLocation };
     }
+    if (req.body.city) resource.pickupLocation.city = req.body.city.trim();
+    if (req.body.state) resource.pickupLocation.state = req.body.state.trim();
+    if (req.body.facilityAddress) resource.pickupLocation.address = req.body.facilityAddress.trim();
 
     if (req.body.totalQuantity !== undefined) {
       const newTotal = Number(req.body.totalQuantity);

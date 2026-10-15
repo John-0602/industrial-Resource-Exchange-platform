@@ -197,4 +197,32 @@ describe('Industrial Exchange & Matching Service Tests', () => {
     assert.equal(mockResource.availableQuantity, 4000);
     assert.equal(mockResource.reservedQuantity, 2000);
   });
+
+  test('POST /api/requirements accepts frontend field aliases (materialTitle, specificationDetails, maxBudgetPerUnit)', async () => {
+    const res = await request(app)
+      .post('/api/requirements')
+      .set('Authorization', `Bearer ${receiverToken}`)
+      .send({
+        materialCategory: 'Wood scraps and sawdust',
+        materialTitle: 'Bulk Wood Sawdust & Planer Shavings',
+        specificationDetails: 'Clean, dry pine shavings with <12% moisture content',
+        requiredQuantity: 120,
+        unit: 'tonnes',
+        acceptableCondition: 'Clean, Dry Scrap',
+        deliveryLocation: {
+          city: 'Pune',
+          state: 'Maharashtra',
+          facilityAddress: 'Plot 4, MIDC Bhosari'
+        },
+        maxBudgetPerUnit: 22,
+        handlingRequirements: 'Bulk tipper truck access required'
+      });
+
+    assert.equal(res.status, 201);
+    assert.equal(res.body.data.title, 'Bulk Wood Sawdust & Planer Shavings');
+    assert.equal(res.body.data.specifications, 'Clean, dry pine shavings with <12% moisture content');
+    assert.equal(res.body.data.maxBudget, 22);
+    assert.equal(res.body.data.deliveryLocation.city, 'Pune');
+  });
 });
+

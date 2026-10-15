@@ -86,8 +86,8 @@ export const NegotiationDetailsPage = () => {
   if (!exchange) return null;
 
   const currentUserId = user?.id || user?._id;
-  const isSupplier = currentUserId === exchange.supplierCompanyId;
-  const isReceiver = currentUserId === exchange.receiverCompanyId;
+  const isSupplier = Boolean(currentUserId && exchange.supplierCompanyId && String(currentUserId) === String(exchange.supplierCompanyId));
+  const isReceiver = Boolean(currentUserId && exchange.receiverCompanyId && String(currentUserId) === String(exchange.receiverCompanyId));
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-16">

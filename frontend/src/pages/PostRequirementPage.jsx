@@ -42,6 +42,19 @@ export const PostRequirementPage = () => {
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // Synchronize form with logged in enterprise facility profile
+  React.useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        facilityAddress: prev.facilityAddress || user.address || '',
+        city: prev.city || user.city || '',
+        state: prev.state || user.state || '',
+        country: prev.country || user.country || 'India'
+      }));
+    }
+  }, [user]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -51,29 +64,58 @@ export const PostRequirementPage = () => {
     e.preventDefault();
     setFormError('');
 
+    if (!formData.materialTitle.trim()) {
+      setFormError('Please enter the target material title');
+      return;
+    }
+
+    if (!formData.specificationDetails.trim()) {
+      setFormError('Please enter specification and quality acceptance parameters');
+      return;
+    }
+
     if (Number(formData.requiredQuantity) <= 0) {
       setFormError('Required quantity must be greater than zero');
       return;
     }
 
+    if (!formData.city.trim()) {
+      setFormError('Please enter the destination receiving city / hub');
+      return;
+    }
+
+    if (!formData.state.trim()) {
+      setFormError('Please enter the destination receiving state / province');
+      return;
+    }
+
     setLoading(true);
     try {
+      const deliveryAddress = formData.facilityAddress.trim() || `${formData.city.trim()} Receiving Facility`;
+
       const payload = {
-        materialCategory: formData.materialCategory,
+        title: formData.materialTitle.trim(),
         materialTitle: formData.materialTitle.trim(),
+        materialCategory: formData.materialCategory,
+        category: formData.materialCategory,
+        specifications: formData.specificationDetails.trim(),
         specificationDetails: formData.specificationDetails.trim(),
         requiredQuantity: Number(formData.requiredQuantity),
         unit: formData.unit,
         acceptableCondition: formData.acceptableCondition,
+        condition: formData.acceptableCondition,
         deliveryLocation: {
           city: formData.city.trim(),
           state: formData.state.trim(),
-          country: formData.country.trim(),
-          facilityAddress: formData.facilityAddress.trim()
+          country: formData.country.trim() || 'India',
+          address: deliveryAddress,
+          facilityAddress: deliveryAddress
         },
+        maxBudget: Number(formData.maxBudgetPerUnit) || 0,
         maxBudgetPerUnit: Number(formData.maxBudgetPerUnit) || 0,
         currency: formData.currency,
         requiredByDate: formData.requiredByDate || undefined,
+        additionalHandling: formData.handlingRequirements.trim(),
         handlingRequirements: formData.handlingRequirements.trim()
       };
 
