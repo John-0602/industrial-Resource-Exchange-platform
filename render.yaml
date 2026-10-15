@@ -2,7 +2,7 @@ services:
   # Microservice 1: Resource Service
   - type: web
     name: resource-service
-    env: node
+    runtime: node
     rootDir: resource-service
     buildCommand: npm install
     startCommand: npm start
@@ -25,7 +25,7 @@ services:
   # Microservice 2: Exchange Service
   - type: web
     name: exchange-service
-    env: node
+    runtime: node
     rootDir: exchange-service
     buildCommand: npm install
     startCommand: npm start
@@ -56,12 +56,13 @@ services:
       - key: CLIENT_ORIGIN
         value: "*"
 
-  # Frontend Web Client (Single Page App)
-  - type: static
+  # Frontend Web Client (Static Single Page App)
+  - type: web
     name: irep-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
-    publishDir: dist
+    staticPublishPath: ./dist
     routes:
       - type: rewrite
         source: /*
