@@ -64,12 +64,21 @@ const seedIndustrialExchanges = async () => {
     console.log(`   - "${req2.title}" (5 tonnes Metal Scrap)`);
     console.log('====================================================');
 
-    await disconnectDB();
-    process.exit(0);
+    if (require.main === module) {
+      await disconnectDB();
+      process.exit(0);
+    }
   } catch (error) {
     console.error('❌ Exchange seeding error:', error);
-    process.exit(1);
+    if (require.main === module) {
+      process.exit(1);
+    }
+    throw error;
   }
 };
 
-seedIndustrialExchanges();
+if (require.main === module) {
+  seedIndustrialExchanges();
+}
+
+module.exports = { seedIndustrialExchanges };

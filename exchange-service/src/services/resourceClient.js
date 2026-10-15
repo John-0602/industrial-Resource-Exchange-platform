@@ -1,7 +1,11 @@
 const axios = require('axios');
 
 const getBaseUrl = () => {
-  return process.env.RESOURCE_SERVICE_URL || 'http://localhost:5001';
+  let url = process.env.RESOURCE_SERVICE_URL || 'http://localhost:5001';
+  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+  return url;
 };
 
 const getServiceKey = () => {

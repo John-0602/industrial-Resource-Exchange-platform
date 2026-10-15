@@ -64,7 +64,19 @@ const PORT = process.env.PORT || 5002;
 
 let server;
 if (process.env.NODE_ENV !== 'test') {
-  connectDB().then(() => {
+  connectDB().then(async () => {
+    try {
+      const Requirement = require('./src/models/Requirement');
+      const count = await Requirement.countDocuments();
+      if (count === 0) {
+        console.log('[Auto-Seed] Empty database detected. Seeding verified industrial exchange requirements...');
+        const { seedIndustrialExchanges } = require('./src/scripts/seed');
+        await seedIndustrialExchanges();
+      }
+    } catch (seedErr) {
+      console.warn('[Auto-Seed] Notice: Automatic seed skipped:', seedErr.message);
+    }
+
     server = app.listen(PORT, () => {
       console.log(`=========================================`);
       console.log(`🔄 Exchange Service running on port ${PORT}`);

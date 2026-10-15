@@ -1,7 +1,15 @@
 import axios from 'axios';
 
-const RESOURCE_SERVICE_BASE = import.meta.env.VITE_RESOURCE_SERVICE_URL || 'http://localhost:5001';
-const EXCHANGE_SERVICE_BASE = import.meta.env.VITE_EXCHANGE_SERVICE_URL || 'http://localhost:5002';
+const formatBaseUrl = (rawUrl, fallback) => {
+  let url = (rawUrl || fallback || '').trim();
+  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+  return url;
+};
+
+const RESOURCE_SERVICE_BASE = formatBaseUrl(import.meta.env.VITE_RESOURCE_SERVICE_URL, 'http://localhost:5001');
+const EXCHANGE_SERVICE_BASE = formatBaseUrl(import.meta.env.VITE_EXCHANGE_SERVICE_URL, 'http://localhost:5002');
 
 export const resourceApi = axios.create({
   baseURL: RESOURCE_SERVICE_BASE,

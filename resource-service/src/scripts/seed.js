@@ -353,12 +353,21 @@ const seedIndustrialData = async () => {
     console.log(`📦 Seeded ${resources.length} verified industrial material listings with quantity tracking.`);
     console.log('====================================================');
 
-    await disconnectDB();
-    process.exit(0);
+    if (require.main === module) {
+      await disconnectDB();
+      process.exit(0);
+    }
   } catch (error) {
     console.error('❌ Seeding failed:', error);
-    process.exit(1);
+    if (require.main === module) {
+      process.exit(1);
+    }
+    throw error;
   }
 };
 
-seedIndustrialData();
+if (require.main === module) {
+  seedIndustrialData();
+}
+
+module.exports = { seedIndustrialData };

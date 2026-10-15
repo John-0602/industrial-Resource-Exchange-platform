@@ -66,7 +66,19 @@ const PORT = process.env.PORT || 5001;
 
 let server;
 if (process.env.NODE_ENV !== 'test') {
-  connectDB().then(() => {
+  connectDB().then(async () => {
+    try {
+      const Company = require('./src/models/Company');
+      const count = await Company.countDocuments();
+      if (count === 0) {
+        console.log('[Auto-Seed] Empty database detected. Seeding verified industrial demo data...');
+        const { seedIndustrialData } = require('./src/scripts/seed');
+        await seedIndustrialData();
+      }
+    } catch (seedErr) {
+      console.warn('[Auto-Seed] Notice: Automatic seed skipped:', seedErr.message);
+    }
+
     server = app.listen(PORT, () => {
       console.log(`=========================================`);
       console.log(`🚀 Resource Service running on port ${PORT}`);

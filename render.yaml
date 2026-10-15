@@ -17,10 +17,10 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: CLIENT_ORIGIN
-        sync: false
       - key: SERVICE_API_KEY
         generateValue: true
+      - key: CLIENT_ORIGIN
+        value: "*"
 
   # Microservice 2: Exchange Service
   - type: web
@@ -54,4 +54,27 @@ services:
           name: resource-service
           envVarKey: SERVICE_API_KEY
       - key: CLIENT_ORIGIN
-        sync: false
+        value: "*"
+
+  # Frontend Web Client (Single Page App)
+  - type: static
+    name: irep-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    autoDeploy: true
+    envVars:
+      - key: VITE_RESOURCE_SERVICE_URL
+        fromService:
+          type: web
+          name: resource-service
+          property: host
+      - key: VITE_EXCHANGE_SERVICE_URL
+        fromService:
+          type: web
+          name: exchange-service
+          property: host
