@@ -21,6 +21,11 @@ services:
         generateValue: true
       - key: CLIENT_ORIGIN
         value: "*"
+      - key: EXCHANGE_SERVICE_URL
+        fromService:
+          type: web
+          name: exchange-service
+          property: host
 
   # Microservice 2: Exchange Service
   - type: web

@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
+const fs = require('fs');
 const mongoose = require('mongoose');
 const { connectDB } = require('./src/config/db');
 const { errorHandler } = require('./src/middleware/errorHandler');
@@ -15,7 +17,10 @@ const healthRoutes = require('./src/routes/healthRoutes');
 const app = express();
 
 // Security and utility middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 app.use(cors({
   origin: process.env.CLIENT_ORIGIN || '*',
   credentials: true
@@ -45,11 +50,60 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Mount routes
+// Mount API routes
 app.use('/', healthRoutes);
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/resources', resourceRoutes);
+
+// Optional: Forward /api/exchanges to Exchange Service if configured
+const getExchangeServiceUrl = () => {
+  let url = (process.env.EXCHANGE_SERVICE_URL || 'http://localhost:5002').trim();
+  if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+  return url.replace(/\/+$/, '');
+};
+
+app.use('/api/exchanges', async (req, res, next) => {
+  const exchangeBase = getExchangeServiceUrl();
+  try {
+    const targetUrl = `${exchangeBase}/api/exchanges${req.url === '/' ? '' : req.url}`;
+    const headers = {
+      'content-type': req.headers['content-type'] || 'application/json',
+      'authorization': req.headers.authorization || '',
+      'x-service-api-key': process.env.SERVICE_API_KEY || 'internal_shared_microservice_secret_token_college_2025'
+    };
+
+    const hasBody = !['GET', 'HEAD'].includes(req.method.toUpperCase());
+    const response = await fetch(targetUrl, {
+      method: req.method,
+      headers,
+      body: hasBody ? JSON.stringify(req.body) : undefined
+    });
+
+    const data = await response.text();
+    res.status(response.status);
+    const contentType = response.headers.get('content-type');
+    if (contentType) res.setHeader('content-type', contentType);
+    return res.send(data);
+  } catch (proxyErr) {
+    // If exchange service proxy fails, fall through to error handling
+    return next(proxyErr);
+  }
+});
+
+// Serve frontend static production bundle if available in public directory
+const publicDir = path.join(__dirname, 'public');
+if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path === '/health') {
+      return next();
+    }
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
+}
 
 // 404 handler
 app.use((req, res, next) => {
